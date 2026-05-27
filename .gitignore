@@ -1,0 +1,60 @@
+# Gradle and Android build output
+.gradle/
+build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local SDK, machine, and generated config
+local.properties
+
+# Android Studio and IntelliJ local state
+*.iml
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetDropDown.xml
+.idea/render.experimental.xml
+.idea/shelf/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Kotlin, Java, and runtime noise
+*.class
+*.log
+hs_err_pid*
+replay_pid*
+
+# Native build byproducts
+*.o
+*.so
+*.dylib
+
+# App packages and generated signing artifacts
+*.apk
+*.ap_
+*.aab
+*.idsig
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+secrets.properties
+google-services.json
+
+# Keep required wrapper and vendored dependency artifacts trackable.
+!gradle/wrapper/gradle-wrapper.jar
+!xposed/libs/*.aar
+!xposed/libs/*.jar
+AGENTS.md
+screenshot-clip-spec.md
+plan.md
