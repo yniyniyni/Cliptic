@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+    <string name="xposed_description">Adds Cliptic hooks for the Android 16 Pixel screenshot toolbar.</string>
+</resources>

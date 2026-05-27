@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.Cliptic.Xposed" parent="@android:style/Theme.Material.NoActionBar" />
+</resources>

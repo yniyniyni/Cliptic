@@ -24,3 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Cliptic"
 include(":app")
+include(":core")
+include(":xposed")

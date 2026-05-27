@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Cliptic</string>
+    <string name="screenshot_copied">Screenshot copied</string>
+    <string name="service_channel_name">Screenshot monitor</string>
+    <string name="service_notification_title">Cliptic is watching screenshots</string>
+    <string name="service_notification_text">New screenshots are copied automatically.</string>
+    <string name="service_stop">Stop</string>
 </resources>
