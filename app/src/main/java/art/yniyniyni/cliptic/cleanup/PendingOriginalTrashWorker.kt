@@ -9,7 +9,7 @@ class PendingOriginalTrashWorker(
     params: WorkerParameters
 ) : Worker(context, params) {
     override fun doWork(): Result {
-        if (OriginalScreenshotCleanup.pendingOriginalUri(applicationContext) == null) {
+        if (OriginalScreenshotCleanup.pendingOriginalCount(applicationContext) == 0) {
             return Result.success()
         }
         if (!OriginalScreenshotCleanup.canTrashSilently(applicationContext)) {

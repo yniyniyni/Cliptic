@@ -1,7 +1,6 @@
 package art.yniyniyni.cliptic.cleanup
 
 import android.content.ActivityNotFoundException
-import android.content.ContentValues
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -35,45 +34,44 @@ object OriginalScreenshotCleanup {
 
     fun requestTrashPrompt(context: Context, originalUri: Uri) {
         val appContext = context.applicationContext
-        val requestId = System.currentTimeMillis().toString()
-        savePending(appContext, originalUri, requestId)
+        addPending(appContext, originalUri)
 
         if (canTrashSilently(appContext)) {
             showCleanupInProgress(appContext)
-            scheduleFastTrashRetries(appContext, originalUri, requestId)
+            scheduleFastTrashRetries(appContext, originalUri)
             enqueuePendingTrashWork(appContext)
         } else {
-            showFallbackNotification(appContext, originalUri, requestId)
+            showPendingFallbackNotification(appContext)
         }
     }
 
     fun launchPendingPrompt(context: Context) {
-        val prefs = ClipticSettings.prefs(context)
-        val originalUri = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, null)?.let(Uri::parse)
-        val requestId = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID, null)
-        if (originalUri != null && requestId != null) {
+        val originalUri = pendingOriginalUri(context)
+        if (originalUri != null) {
             if (tryTrashOriginal(context.applicationContext, originalUri)) {
-                clearPending(context.applicationContext)
+                removePending(context.applicationContext, originalUri)
                 return
             }
-            context.startActivity(promptIntent(context.applicationContext, originalUri, requestId))
+            context.startActivity(promptIntent(context.applicationContext, originalUri))
         }
     }
 
     fun onTrashPromptResult(context: Context, requestId: String?, originalUri: Uri?, removed: Boolean) {
-        if (requestId == null || originalUri == null) return
+        if (originalUri == null) return
         if (removed) {
-            clearPending(context)
+            removePending(context, originalUri)
         } else {
-            savePending(context, originalUri, requestId)
-            showFallbackNotification(context, originalUri, requestId)
+            addPending(context, originalUri)
+            showPendingFallbackNotification(context)
         }
     }
 
     fun pendingOriginalUri(context: Context): Uri? {
-        return ClipticSettings.prefs(context)
-            .getString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, null)
-            ?.let(Uri::parse)
+        return pendingOriginalUris(context).firstOrNull()
+    }
+
+    fun pendingOriginalCount(context: Context): Int {
+        return pendingOriginalUris(context).size
     }
 
     fun isLikelyScreenshotOriginal(context: Context, originalUri: Uri): Boolean {
@@ -102,12 +100,14 @@ object OriginalScreenshotCleanup {
     }
 
     fun attemptPendingTrash(context: Context): Boolean {
-        val originalUri = pendingOriginalUri(context) ?: return false
-        val removed = tryTrashOriginal(context.applicationContext, originalUri)
-        if (removed) {
-            clearPending(context.applicationContext)
+        var removedAny = false
+        pendingOriginalUris(context).forEach { originalUri ->
+            if (tryTrashOriginal(context.applicationContext, originalUri)) {
+                removePending(context.applicationContext, originalUri)
+                removedAny = true
+            }
         }
-        return removed
+        return removedAny
     }
 
     fun openMediaManagementSettings(context: Context) {
@@ -127,47 +127,54 @@ object OriginalScreenshotCleanup {
 
     fun tryTrashOriginal(context: Context, originalUri: Uri): Boolean {
         if (!canTrashSilently(context)) return false
-        val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.IS_TRASHED, 1)
-        }
         return runCatching {
-            val updated = context.contentResolver.update(originalUri, values, null, null)
-            Log.d(TAG, "trash update result=$updated uri=$originalUri")
-            updated > 0
+            val request = MediaStore.createTrashRequest(
+                context.contentResolver,
+                listOf(originalUri),
+                true
+            )
+            request.send()
+            Log.d(TAG, "trash request sent uri=$originalUri")
+            true
         }.onFailure { throwable ->
-            Log.w(TAG, "trash update failed uri=$originalUri", throwable)
+            Log.w(TAG, "trash request failed uri=$originalUri", throwable)
         }.getOrDefault(false)
     }
 
     fun showPendingFallbackNotification(context: Context) {
-        val prefs = ClipticSettings.prefs(context)
-        val originalUri = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, null)?.let(Uri::parse)
-        val requestId = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID, null)
-        if (originalUri != null && requestId != null) {
-            showFallbackNotification(context.applicationContext, originalUri, requestId)
+        val originals = pendingOriginalUris(context)
+        val originalUri = originals.firstOrNull()
+        if (originalUri != null) {
+            showFallbackNotification(context.applicationContext, originalUri, originals.size)
         }
     }
 
-    private fun promptIntent(context: Context, originalUri: Uri, requestId: String): Intent {
+    private fun promptIntent(context: Context, originalUri: Uri): Intent {
         return Intent(context, RemoveOriginalActivity::class.java)
             .setAction(AppActions.ACTION_TRASH_ORIGINAL)
             .putExtra(AppActions.EXTRA_SCREENSHOT_URI, originalUri.toString())
-            .putExtra(AppActions.EXTRA_REQUEST_ID, requestId)
+            .putExtra(AppActions.EXTRA_REQUEST_ID, originalUri.toString())
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
-    private fun showFallbackNotification(context: Context, originalUri: Uri, requestId: String) {
+    private fun showFallbackNotification(context: Context, originalUri: Uri, pendingCount: Int) {
         createChannel(context)
         val pendingIntent = PendingIntent.getActivity(
             context,
             NOTIFICATION_ID,
-            promptIntent(context, originalUri, requestId),
+            promptIntent(context, originalUri),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_tile_cliptic)
             .setContentTitle(context.getString(R.string.trash_notification_title))
-            .setContentText(context.getString(R.string.trash_notification_text))
+            .setContentText(
+                if (pendingCount > 1) {
+                    "Confirm removal from the gallery. Pending: $pendingCount"
+                } else {
+                    context.getString(R.string.trash_notification_text)
+                }
+            )
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -182,33 +189,12 @@ object OriginalScreenshotCleanup {
             .cancel(NOTIFICATION_ID)
     }
 
-    private fun savePending(context: Context, originalUri: Uri, requestId: String) {
-        ClipticSettings.prefs(context).edit()
-            .putString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, originalUri.toString())
-            .putString(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID, requestId)
-            .apply()
-    }
-
-    private fun clearPending(context: Context) {
-        ClipticSettings.prefs(context).edit()
-            .remove(ClipticSettings.KEY_PENDING_ORIGINAL_URI)
-            .remove(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID)
-            .apply()
-        context.getSystemService(NotificationManager::class.java)
-            .cancel(NOTIFICATION_ID)
-    }
-
-    private fun pendingRequestId(context: Context): String? {
-        return ClipticSettings.prefs(context)
-            .getString(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID, null)
-    }
-
-    private fun scheduleFastTrashRetries(context: Context, originalUri: Uri, requestId: String) {
+    private fun scheduleFastTrashRetries(context: Context, originalUri: Uri) {
         FAST_RETRY_DELAYS_MS.forEachIndexed { index, delayMs ->
             retryHandler.postDelayed({
-                if (pendingRequestId(context) != requestId) return@postDelayed
+                if (!pendingOriginalUris(context).contains(originalUri)) return@postDelayed
                 if (tryTrashOriginal(context, originalUri)) {
-                    clearPending(context)
+                    removePending(context, originalUri)
                 } else {
                     Log.d(TAG, "fast trash retry failed attempt=${index + 1} uri=$originalUri")
                 }
@@ -226,6 +212,56 @@ object OriginalScreenshotCleanup {
             ExistingWorkPolicy.REPLACE,
             request
         )
+    }
+
+    private fun addPending(context: Context, originalUri: Uri) {
+        val current = pendingOriginalUris(context)
+        if (current.contains(originalUri)) return
+        savePendingQueue(context, current + originalUri)
+    }
+
+    private fun removePending(context: Context, originalUri: Uri) {
+        val updated = pendingOriginalUris(context).filterNot { it == originalUri }
+        savePendingQueue(context, updated)
+        if (updated.isEmpty()) {
+            context.getSystemService(NotificationManager::class.java)
+                .cancel(NOTIFICATION_ID)
+        } else {
+            showPendingFallbackNotification(context)
+        }
+    }
+
+    private fun pendingOriginalUris(context: Context): List<Uri> {
+        val prefs = ClipticSettings.prefs(context)
+        val queue = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_QUEUE, null)
+        if (queue != null) {
+            return queue.lineSequence()
+                .mapNotNull { raw -> raw.takeIf { it.isNotBlank() }?.let(Uri::parse) }
+                .distinct()
+                .toList()
+        }
+
+        val legacyUri = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, null)?.let(Uri::parse)
+        if (legacyUri != null) {
+            savePendingQueue(context, listOf(legacyUri))
+            return listOf(legacyUri)
+        }
+        return emptyList()
+    }
+
+    private fun savePendingQueue(context: Context, originals: List<Uri>) {
+        val editor = ClipticSettings.prefs(context).edit()
+            .remove(ClipticSettings.KEY_PENDING_ORIGINAL_URI)
+            .remove(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID)
+        if (originals.isEmpty()) {
+            editor.remove(ClipticSettings.KEY_PENDING_ORIGINAL_QUEUE)
+        } else {
+            editor.putString(
+                ClipticSettings.KEY_PENDING_ORIGINAL_QUEUE,
+                originals.distinct().joinToString(separator = "\n") { it.toString() }
+            )
+        }
+        editor.apply()
     }
 
     private fun createChannel(context: Context) {

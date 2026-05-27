@@ -21,6 +21,7 @@ object ClipticSettings {
     const val KEY_ONBOARDING_DONE = "onboarding_done"
     const val KEY_PENDING_ORIGINAL_URI = "pending_original_uri"
     const val KEY_PENDING_ORIGINAL_REQUEST_ID = "pending_original_request_id"
+    const val KEY_PENDING_ORIGINAL_QUEUE = "pending_original_queue"
     const val KEY_SERVICE_RUNNING = "service_running"
 
     const val COPY_MODE_AUTO = "auto"

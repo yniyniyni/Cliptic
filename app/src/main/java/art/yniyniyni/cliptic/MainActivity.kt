@@ -93,7 +93,7 @@ private fun ClipticApp() {
     var startOnBoot by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_START_ON_BOOT, true)) }
     var serviceRunning by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SERVICE_RUNNING, false)) }
     var copyMode by remember { mutableStateOf(prefs.getString(ClipticSettings.KEY_COPY_MODE, ClipticSettings.COPY_MODE_AUTO) ?: ClipticSettings.COPY_MODE_AUTO) }
-    var pendingOriginalUri by remember { mutableStateOf(OriginalScreenshotCleanup.pendingOriginalUri(context)) }
+    var pendingOriginalCount by remember { mutableStateOf(OriginalScreenshotCleanup.pendingOriginalCount(context)) }
     var mediaManagementGranted by remember { mutableStateOf(OriginalScreenshotCleanup.canTrashSilently(context)) }
     val xposedActive = remember { XposedBridge.isModuleActive() }
     var onboardingVisible by remember { mutableStateOf(!prefs.getBoolean(ClipticSettings.KEY_ONBOARDING_DONE, false)) }
@@ -107,7 +107,7 @@ private fun ClipticApp() {
     LaunchedEffect(Unit) {
         ClipticSettings.ensureDefaults(context)
         OriginalScreenshotCleanup.attemptPendingTrash(context)
-        pendingOriginalUri = OriginalScreenshotCleanup.pendingOriginalUri(context)
+        pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
         mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
     }
 
@@ -116,7 +116,7 @@ private fun ClipticApp() {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 OriginalScreenshotCleanup.attemptPendingTrash(context)
-                pendingOriginalUri = OriginalScreenshotCleanup.pendingOriginalUri(context)
+                pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
                 mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
             }
         }
@@ -145,7 +145,7 @@ private fun ClipticApp() {
         ) {
             StatusCard(
                 serviceRunning = serviceRunning,
-                hasPendingOriginal = pendingOriginalUri != null,
+                pendingOriginalCount = pendingOriginalCount,
                 xposedActive = xposedActive,
                 onStart = {
                     ClipticSettings.startScreenshotService(context)
@@ -153,7 +153,7 @@ private fun ClipticApp() {
                 },
                 onRemoveOriginal = {
                     OriginalScreenshotCleanup.launchPendingPrompt(context)
-                    pendingOriginalUri = OriginalScreenshotCleanup.pendingOriginalUri(context)
+                    pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
                     mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
                 }
             )
@@ -187,7 +187,7 @@ private fun ClipticApp() {
                 )
                 MediaManagementStatus(
                     granted = mediaManagementGranted,
-                    hasPendingOriginal = pendingOriginalUri != null,
+                    pendingOriginalCount = pendingOriginalCount,
                     onOpenSettings = {
                         OriginalScreenshotCleanup.openMediaManagementSettings(context)
                     }
@@ -287,7 +287,7 @@ private fun ClipticApp() {
 @Composable
 private fun StatusCard(
     serviceRunning: Boolean,
-    hasPendingOriginal: Boolean,
+    pendingOriginalCount: Int,
     xposedActive: Boolean,
     onStart: () -> Unit,
     onRemoveOriginal: () -> Unit
@@ -328,9 +328,15 @@ private fun StatusCard(
                     Text("Start")
                 }
             }
-            if (hasPendingOriginal) {
+            if (pendingOriginalCount > 0) {
                 Button(onClick = onRemoveOriginal) {
-                    Text("Remove original")
+                    Text(
+                        if (pendingOriginalCount == 1) {
+                            "Remove original"
+                        } else {
+                            "Remove originals ($pendingOriginalCount)"
+                        }
+                    )
                 }
             }
         }
@@ -340,7 +346,7 @@ private fun StatusCard(
 @Composable
 private fun MediaManagementStatus(
     granted: Boolean,
-    hasPendingOriginal: Boolean,
+    pendingOriginalCount: Int,
     onOpenSettings: () -> Unit
 ) {
     Row(
@@ -353,8 +359,8 @@ private fun MediaManagementStatus(
             Text(
                 text = if (granted) {
                     "Original screenshots can be removed without a prompt."
-                } else if (hasPendingOriginal) {
-                    "Grant access to remove the pending original automatically."
+                } else if (pendingOriginalCount > 0) {
+                    "Grant access to remove pending originals automatically."
                 } else {
                     "Without this, Android will ask before removing originals."
                 },
