@@ -8,27 +8,43 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.HandlerThread
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.work.BackoffPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
 import art.yniyniyni.cliptic.AppActions
 import art.yniyniyni.cliptic.R
 import art.yniyniyni.cliptic.settings.ClipticSettings
+import java.util.concurrent.TimeUnit
 
 object OriginalScreenshotCleanup {
+    private const val TAG = "ClipticCleanup"
     private const val CHANNEL_ID = "screenshot_cleanup"
     private const val NOTIFICATION_ID = 10_000
+    private const val UNIQUE_WORK_NAME = "pending_original_trash"
+    private val FAST_RETRY_DELAYS_MS = longArrayOf(0L, 300L, 900L, 2_000L, 5_000L)
+    private val retryHandler by lazy {
+        Handler(HandlerThread("ClipticOriginalTrash").apply { start() }.looper)
+    }
 
     fun requestTrashPrompt(context: Context, originalUri: Uri) {
         val appContext = context.applicationContext
-        if (tryTrashOriginal(appContext, originalUri)) {
-            clearPending(appContext)
-            return
-        }
-
         val requestId = System.currentTimeMillis().toString()
         savePending(appContext, originalUri, requestId)
-        showFallbackNotification(appContext, originalUri, requestId)
+
+        if (canTrashSilently(appContext)) {
+            showCleanupInProgress(appContext)
+            scheduleFastTrashRetries(appContext, originalUri, requestId)
+            enqueuePendingTrashWork(appContext)
+        } else {
+            showFallbackNotification(appContext, originalUri, requestId)
+        }
     }
 
     fun launchPendingPrompt(context: Context) {
@@ -58,6 +74,27 @@ object OriginalScreenshotCleanup {
         return ClipticSettings.prefs(context)
             .getString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, null)
             ?.let(Uri::parse)
+    }
+
+    fun isLikelyScreenshotOriginal(context: Context, originalUri: Uri): Boolean {
+        if (originalUri.authority != MediaStore.AUTHORITY) return false
+        val projection = arrayOf(
+            MediaStore.MediaColumns.RELATIVE_PATH,
+            MediaStore.MediaColumns.DISPLAY_NAME
+        )
+        return runCatching {
+            context.contentResolver.query(originalUri, projection, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use false
+                val relativePath = cursor.getString(
+                    cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
+                ).orEmpty()
+                val displayName = cursor.getString(
+                    cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+                ).orEmpty()
+                relativePath.contains("Screenshots", ignoreCase = true) ||
+                    displayName.contains("Screenshot", ignoreCase = true)
+            } ?: false
+        }.getOrDefault(false)
     }
 
     fun canTrashSilently(context: Context): Boolean {
@@ -94,8 +131,21 @@ object OriginalScreenshotCleanup {
             put(MediaStore.MediaColumns.IS_TRASHED, 1)
         }
         return runCatching {
-            context.contentResolver.update(originalUri, values, null, null) > 0
+            val updated = context.contentResolver.update(originalUri, values, null, null)
+            Log.d(TAG, "trash update result=$updated uri=$originalUri")
+            updated > 0
+        }.onFailure { throwable ->
+            Log.w(TAG, "trash update failed uri=$originalUri", throwable)
         }.getOrDefault(false)
+    }
+
+    fun showPendingFallbackNotification(context: Context) {
+        val prefs = ClipticSettings.prefs(context)
+        val originalUri = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, null)?.let(Uri::parse)
+        val requestId = prefs.getString(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID, null)
+        if (originalUri != null && requestId != null) {
+            showFallbackNotification(context.applicationContext, originalUri, requestId)
+        }
     }
 
     private fun promptIntent(context: Context, originalUri: Uri, requestId: String): Intent {
@@ -127,6 +177,11 @@ object OriginalScreenshotCleanup {
             .notify(NOTIFICATION_ID, notification)
     }
 
+    private fun showCleanupInProgress(context: Context) {
+        context.getSystemService(NotificationManager::class.java)
+            .cancel(NOTIFICATION_ID)
+    }
+
     private fun savePending(context: Context, originalUri: Uri, requestId: String) {
         ClipticSettings.prefs(context).edit()
             .putString(ClipticSettings.KEY_PENDING_ORIGINAL_URI, originalUri.toString())
@@ -141,6 +196,36 @@ object OriginalScreenshotCleanup {
             .apply()
         context.getSystemService(NotificationManager::class.java)
             .cancel(NOTIFICATION_ID)
+    }
+
+    private fun pendingRequestId(context: Context): String? {
+        return ClipticSettings.prefs(context)
+            .getString(ClipticSettings.KEY_PENDING_ORIGINAL_REQUEST_ID, null)
+    }
+
+    private fun scheduleFastTrashRetries(context: Context, originalUri: Uri, requestId: String) {
+        FAST_RETRY_DELAYS_MS.forEachIndexed { index, delayMs ->
+            retryHandler.postDelayed({
+                if (pendingRequestId(context) != requestId) return@postDelayed
+                if (tryTrashOriginal(context, originalUri)) {
+                    clearPending(context)
+                } else {
+                    Log.d(TAG, "fast trash retry failed attempt=${index + 1} uri=$originalUri")
+                }
+            }, delayMs)
+        }
+    }
+
+    private fun enqueuePendingTrashWork(context: Context) {
+        val request = OneTimeWorkRequest.Builder(PendingOriginalTrashWorker::class.java)
+            .setInitialDelay(10, TimeUnit.SECONDS)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            UNIQUE_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
     }
 
     private fun createChannel(context: Context) {
