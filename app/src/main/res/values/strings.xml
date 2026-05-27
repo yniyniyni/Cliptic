@@ -5,4 +5,8 @@
     <string name="service_notification_title">Cliptic is watching screenshots</string>
     <string name="service_notification_text">New screenshots are copied automatically.</string>
     <string name="service_stop">Stop</string>
+    <string name="trash_channel_name">Screenshot cleanup</string>
+    <string name="trash_notification_title">Remove original screenshot</string>
+    <string name="trash_notification_text">Confirm removal from the gallery.</string>
+    <string name="trash_notification_action">Remove original</string>
 </resources>

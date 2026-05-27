@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import art.yniyniyni.cliptic.AppActions
 import art.yniyniyni.cliptic.MainActivity
 import art.yniyniyni.cliptic.R
+import art.yniyniyni.cliptic.cleanup.OriginalScreenshotCleanup
 import art.yniyniyni.cliptic.core.clipboard.ClipboardWriter
 import art.yniyniyni.cliptic.core.screenshot.ScreenshotDetector
 import art.yniyniyni.cliptic.core.screenshot.ScreenshotFileManager
@@ -63,18 +64,24 @@ class ScreenshotService : Service() {
         val cachedUri = fileManager.cacheScreenshot(sourceUri)
         if (cachedUri == null) {
             mainHandler.postDelayed({
-                fileManager.cacheScreenshot(sourceUri)?.let(::copyCachedScreenshot)
+                fileManager.cacheScreenshot(sourceUri)?.let { copyCachedScreenshot(it, sourceUri) }
             }, RETRY_DELAY_MS)
             return
         }
-        copyCachedScreenshot(cachedUri)
+        copyCachedScreenshot(cachedUri, sourceUri)
     }
 
-    private fun copyCachedScreenshot(cachedUri: Uri) {
+    private fun copyCachedScreenshot(cachedUri: Uri, originalUri: Uri) {
         mainHandler.post {
             ClipboardWriter.copyUriToClipboard(this, cachedUri)
             Toast.makeText(this, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
             fileManager.scheduleCleanup(cachedUri)
+            if (
+                ClipticSettings.prefs(this)
+                    .getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true)
+            ) {
+                OriginalScreenshotCleanup.requestTrashPrompt(this, originalUri)
+            }
         }
     }
 

@@ -15,8 +15,8 @@ class XposedEntry(
 
     override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
         when (param.packageName) {
-            SYSTEMUI_PACKAGE -> SystemUIHook.inspect(param.classLoader, ::logSafe)
-            APP_PACKAGE -> logSafe("app process loaded; active-module hook will be added after API 100 hook surface is verified")
+            AppProtocol.SYSTEMUI_PACKAGE -> SystemUIHook.inspect(param.classLoader, ::logSafe)
+            AppProtocol.APP_PACKAGE -> logSafe("app process loaded; active-module hook will be added after API 100 hook surface is verified")
         }
     }
 
@@ -27,8 +27,6 @@ class XposedEntry(
     }
 
     companion object {
-        const val APP_PACKAGE = "art.yniyniyni.cliptic"
-        const val SYSTEMUI_PACKAGE = "com.android.systemui"
         private const val TAG = "ClipticXposed"
     }
 }

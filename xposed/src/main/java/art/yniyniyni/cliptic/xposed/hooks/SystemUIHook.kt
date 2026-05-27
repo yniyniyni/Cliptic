@@ -1,5 +1,10 @@
 package art.yniyniyni.cliptic.xposed.hooks
 
+import android.content.Context
+import android.content.IntentFilter
+import art.yniyniyni.cliptic.xposed.AppProtocol
+import art.yniyniyni.cliptic.xposed.ipc.CopyAckReceiver
+
 object SystemUIHook {
     fun inspect(classLoader: ClassLoader, log: (String) -> Unit) {
         runCatching {
@@ -18,6 +23,23 @@ object SystemUIHook {
             log("candidate fields=${fields.joinToString()}")
         }.onFailure { throwable ->
             log("SystemUI screenshot inspection failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
+        }
+    }
+
+    fun registerAckReceiver(
+        context: Context,
+        expectedSecretProvider: () -> String?,
+        log: (String) -> Unit
+    ) {
+        runCatching {
+            context.registerReceiver(
+                CopyAckReceiver(expectedSecretProvider, log),
+                IntentFilter(AppProtocol.ACTION_COPY_SCREENSHOT_ACK),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+            log("copy ACK receiver registered in SystemUI")
+        }.onFailure { throwable ->
+            log("copy ACK receiver registration failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
         }
     }
 

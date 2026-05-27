@@ -30,11 +30,20 @@ class CopyBroadcastReceiver : BroadcastReceiver() {
                         ClipboardWriter.copyUriToClipboard(context, cachedUri)
                         Toast.makeText(context, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
                         fileManager.scheduleCleanup(cachedUri)
+                        sendCopyAck(context, sourceUri, secret)
                     }
                 }
             } finally {
                 pendingResult.finish()
             }
         }.start()
+    }
+
+    private fun sendCopyAck(context: Context, originalUri: Uri, secret: String) {
+        val ack = Intent(AppActions.ACTION_COPY_SCREENSHOT_ACK)
+            .setPackage(AppActions.SYSTEMUI_PACKAGE)
+            .putExtra(AppActions.EXTRA_SCREENSHOT_URI, originalUri.toString())
+            .putExtra(AppActions.EXTRA_SECRET, secret)
+        context.sendBroadcast(ack)
     }
 }

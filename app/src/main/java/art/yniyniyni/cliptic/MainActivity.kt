@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import art.yniyniyni.cliptic.cleanup.OriginalScreenshotCleanup
 import art.yniyniyni.cliptic.core.util.XposedBridge
 import art.yniyniyni.cliptic.settings.ClipticSettings
 
@@ -85,9 +86,11 @@ private fun ClipticApp() {
     val prefs = remember { ClipticSettings.prefs(context) }
     var autoCopyEnabled by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_AUTO_COPY_ENABLED, true)) }
     var shareSheetEnabled by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SHARE_SHEET_ENABLED, true)) }
+    var removeOriginalAfterCopy by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true)) }
     var startOnBoot by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_START_ON_BOOT, true)) }
     var serviceRunning by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SERVICE_RUNNING, false)) }
     var copyMode by remember { mutableStateOf(prefs.getString(ClipticSettings.KEY_COPY_MODE, ClipticSettings.COPY_MODE_AUTO) ?: ClipticSettings.COPY_MODE_AUTO) }
+    var pendingOriginalUri by remember { mutableStateOf(OriginalScreenshotCleanup.pendingOriginalUri(context)) }
     val xposedActive = remember { XposedBridge.isModuleActive() }
     var onboardingVisible by remember { mutableStateOf(!prefs.getBoolean(ClipticSettings.KEY_ONBOARDING_DONE, false)) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -120,10 +123,15 @@ private fun ClipticApp() {
         ) {
             StatusCard(
                 serviceRunning = serviceRunning,
+                hasPendingOriginal = pendingOriginalUri != null,
                 xposedActive = xposedActive,
                 onStart = {
                     ClipticSettings.startScreenshotService(context)
                     serviceRunning = true
+                },
+                onRemoveOriginal = {
+                    OriginalScreenshotCleanup.launchPendingPrompt(context)
+                    pendingOriginalUri = OriginalScreenshotCleanup.pendingOriginalUri(context)
                 }
             )
 
@@ -143,6 +151,15 @@ private fun ClipticApp() {
                     onCheckedChange = {
                         shareSheetEnabled = it
                         ClipticSettings.setShareSheetEnabled(context, it)
+                    }
+                )
+                SettingSwitch(
+                    title = "Remove original after copy",
+                    summary = "Ask Android to remove the gallery copy after Cliptic caches it",
+                    checked = removeOriginalAfterCopy,
+                    onCheckedChange = {
+                        removeOriginalAfterCopy = it
+                        prefs.edit().putBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, it).apply()
                     }
                 )
                 SettingSwitch(
@@ -240,8 +257,10 @@ private fun ClipticApp() {
 @Composable
 private fun StatusCard(
     serviceRunning: Boolean,
+    hasPendingOriginal: Boolean,
     xposedActive: Boolean,
-    onStart: () -> Unit
+    onStart: () -> Unit,
+    onRemoveOriginal: () -> Unit
 ) {
     val colors = if (serviceRunning) {
         CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -277,6 +296,11 @@ private fun StatusCard(
             if (!serviceRunning) {
                 Button(onClick = onStart) {
                     Text("Start")
+                }
+            }
+            if (hasPendingOriginal) {
+                Button(onClick = onRemoveOriginal) {
+                    Text("Remove original")
                 }
             }
         }

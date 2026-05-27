@@ -10,11 +10,14 @@ import java.io.IOException
 
 class ScreenshotFileManager(private val context: Context) {
     private val screenshotsDir: File
-        get() = File(context.cacheDir, SCREENSHOT_CACHE_DIR)
+        get() = File(context.cacheDir, CLIPBOARD_CACHE_DIR)
 
     fun cacheScreenshot(sourceUri: Uri): Uri? {
         return try {
-            val outputDir = screenshotsDir.apply { mkdirs() }
+            val outputDir = screenshotsDir.apply {
+                mkdirs()
+                File(this, ".nomedia").createNewFile()
+            }
             val outputFile = File(outputDir, "${System.currentTimeMillis()}.png")
             context.contentResolver.openInputStream(sourceUri)?.use { input ->
                 outputFile.outputStream().use { output ->
@@ -48,12 +51,12 @@ class ScreenshotFileManager(private val context: Context) {
     fun cleanupExpired(maxAgeMs: Long = DEFAULT_CACHE_DURATION_MS) {
         val cutoff = System.currentTimeMillis() - maxAgeMs
         screenshotsDir.listFiles()
-            ?.filter { it.isFile && it.lastModified() < cutoff }
+            ?.filter { it.isFile && it.name != ".nomedia" && it.lastModified() < cutoff }
             ?.forEach { it.delete() }
     }
 
     private companion object {
-        const val SCREENSHOT_CACHE_DIR = "screenshots"
+        const val CLIPBOARD_CACHE_DIR = "cliptic_clipboard"
         const val DEFAULT_CACHE_DURATION_MS = 3_600_000L
     }
 }

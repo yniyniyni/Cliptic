@@ -25,6 +25,12 @@
             android:noHistory="true"
             android:theme="@style/Theme.Cliptic.NoDisplay" />
 
+        <activity
+            android:name=".cleanup.RemoveOriginalActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/Theme.Cliptic.Transparent" />
+
         <activity-alias
             android:name=".share.ShareReceiverAlias"
             android:enabled="true"
