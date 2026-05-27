@@ -39,6 +39,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import art.yniyniyni.cliptic.cleanup.OriginalScreenshotCleanup
 import art.yniyniyni.cliptic.core.util.XposedBridge
 import art.yniyniyni.cliptic.settings.ClipticSettings
@@ -91,6 +94,7 @@ private fun ClipticApp() {
     var serviceRunning by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SERVICE_RUNNING, false)) }
     var copyMode by remember { mutableStateOf(prefs.getString(ClipticSettings.KEY_COPY_MODE, ClipticSettings.COPY_MODE_AUTO) ?: ClipticSettings.COPY_MODE_AUTO) }
     var pendingOriginalUri by remember { mutableStateOf(OriginalScreenshotCleanup.pendingOriginalUri(context)) }
+    var mediaManagementGranted by remember { mutableStateOf(OriginalScreenshotCleanup.canTrashSilently(context)) }
     val xposedActive = remember { XposedBridge.isModuleActive() }
     var onboardingVisible by remember { mutableStateOf(!prefs.getBoolean(ClipticSettings.KEY_ONBOARDING_DONE, false)) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -102,6 +106,24 @@ private fun ClipticApp() {
 
     LaunchedEffect(Unit) {
         ClipticSettings.ensureDefaults(context)
+        OriginalScreenshotCleanup.attemptPendingTrash(context)
+        pendingOriginalUri = OriginalScreenshotCleanup.pendingOriginalUri(context)
+        mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
+    }
+
+    DisposableEffect(context) {
+        val activity = context as? ComponentActivity
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                OriginalScreenshotCleanup.attemptPendingTrash(context)
+                pendingOriginalUri = OriginalScreenshotCleanup.pendingOriginalUri(context)
+                mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
+            }
+        }
+        activity?.lifecycle?.addObserver(observer)
+        onDispose {
+            activity?.lifecycle?.removeObserver(observer)
+        }
     }
 
     Scaffold(
@@ -132,6 +154,7 @@ private fun ClipticApp() {
                 onRemoveOriginal = {
                     OriginalScreenshotCleanup.launchPendingPrompt(context)
                     pendingOriginalUri = OriginalScreenshotCleanup.pendingOriginalUri(context)
+                    mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
                 }
             )
 
@@ -160,6 +183,13 @@ private fun ClipticApp() {
                     onCheckedChange = {
                         removeOriginalAfterCopy = it
                         prefs.edit().putBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, it).apply()
+                    }
+                )
+                MediaManagementStatus(
+                    granted = mediaManagementGranted,
+                    hasPendingOriginal = pendingOriginalUri != null,
+                    onOpenSettings = {
+                        OriginalScreenshotCleanup.openMediaManagementSettings(context)
                     }
                 )
                 SettingSwitch(
@@ -303,6 +333,40 @@ private fun StatusCard(
                     Text("Remove original")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MediaManagementStatus(
+    granted: Boolean,
+    hasPendingOriginal: Boolean,
+    onOpenSettings: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Media management access", fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = if (granted) {
+                    "Original screenshots can be removed without a prompt."
+                } else if (hasPendingOriginal) {
+                    "Grant access to remove the pending original automatically."
+                } else {
+                    "Without this, Android will ask before removing originals."
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        Spacer(Modifier.width(16.dp))
+        Button(
+            enabled = !granted,
+            onClick = onOpenSettings
+        ) {
+            Text(if (granted) "Granted" else "Grant")
         }
     }
 }

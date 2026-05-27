@@ -1,9 +1,11 @@
 package art.yniyniyni.cliptic.xposed.ipc
 
+import android.content.ContentValues
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.MediaStore
 import art.yniyniyni.cliptic.xposed.AppProtocol
 
 class CopyAckReceiver(
@@ -21,10 +23,13 @@ class CopyAckReceiver(
         }
 
         runCatching {
-            val deleted = context.contentResolver.delete(originalUri, null, null)
-            log("silent original delete result=$deleted uri=$originalUri")
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_TRASHED, 1)
+            }
+            val updated = context.contentResolver.update(originalUri, values, null, null)
+            log("silent original trash result=$updated uri=$originalUri")
         }.onFailure { throwable ->
-            log("silent original delete failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
+            log("silent original trash failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
         }
     }
 }

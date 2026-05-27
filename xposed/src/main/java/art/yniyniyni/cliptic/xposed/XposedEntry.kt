@@ -15,7 +15,7 @@ class XposedEntry(
 
     override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
         when (param.packageName) {
-            AppProtocol.SYSTEMUI_PACKAGE -> SystemUIHook.inspect(param.classLoader, ::logSafe)
+            AppProtocol.SYSTEMUI_PACKAGE -> SystemUIHook.install(this, param.classLoader, ::logSafe)
             AppProtocol.APP_PACKAGE -> logSafe("app process loaded; active-module hook will be added after API 100 hook surface is verified")
         }
     }
