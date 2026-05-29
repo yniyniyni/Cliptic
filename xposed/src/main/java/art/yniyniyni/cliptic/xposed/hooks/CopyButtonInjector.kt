@@ -2,43 +2,41 @@ package art.yniyniyni.cliptic.xposed.hooks
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import art.yniyniyni.cliptic.xposed.AppProtocol
 import io.github.libxposed.api.XposedInterface
-import java.lang.ref.WeakReference
+import java.lang.reflect.Constructor
+import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Member
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.lang.reflect.Proxy
 
 /**
  * Injects a "Copy" action chip into the Android 16 Pixel SystemUI screenshot toolbar and, on tap,
  * broadcasts the screenshot [Uri] to the Cliptic app (which caches it, writes it to the clipboard,
- * and ACKs back to silently trash the original).
+ * and ACKs back to silently trash the original). Class/method names and the view hierarchy are in
+ * `xposed/SYSTEMUI_ANDROID16_FINDINGS.md`.
  *
- * Class/method names and the view hierarchy are documented in
- * `xposed/SYSTEMUI_ANDROID16_FINDINGS.md`. Two concerns are wired with one shared after-hook
- * ([CopyHooker] → [onHookedCall]):
- *  - **Uri capture:** [ImageExporter] / [ActionIntentCreator] / [ScreenshotController] methods that
- *    carry the screenshot [Uri] fire during save; we stash the latest one ([latestUri]).
- *  - **Chip injection:** the shelf binder's `bind`/`updateActions` give us the live
- *    `ScreenshotShelfView`; we (re)insert our chip into `LinearLayout id=screenshot_actions` after
- *    the framework repopulates it.
+ * The chip is added by **model injection**, not by mutating the view tree: a *before* hook on
+ * `ScreenshotShelfViewBinder.access$updateActions(binder, List<ActionButtonViewModel>, …)` prepends
+ * our own `ActionButtonViewModel` to the action list, so the framework builds, styles, and recycles
+ * our chip exactly like Share/Edit. (An earlier version added a raw View into the framework-managed
+ * `screenshot_actions` LinearLayout; that corrupted the binder's index-based view recycling and
+ * produced duplicate native chips + a one-frame blink — hence this approach.)
  *
- * Everything is defensive: every probe/hook/inject step is wrapped in [runCatching] so a SystemUI
- * change can only make Copy silently absent — never crash `com.android.systemui`.
+ * The screenshot Uri is captured separately from the Uri-bearing methods of [ImageExporter] /
+ * [ActionIntentCreator] / [ScreenshotController] (see [captureUri]).
+ *
+ * Everything is defensive: every probe/hook step is wrapped in [runCatching] so a SystemUI change
+ * can only make Copy silently absent — never crash `com.android.systemui`.
  */
 object CopyButtonInjector {
     @Volatile
@@ -47,22 +45,50 @@ object CopyButtonInjector {
     @Volatile
     private var latestUri: Uri? = null
 
+    // Reflective handles into SystemUI's action view-model graph, resolved once at install.
     @Volatile
-    private var shelfRef: WeakReference<View>? = null
+    private var appearanceCtor: Constructor<*>? = null
+
+    @Volatile
+    private var viewModelCtor: Constructor<*>? = null
+
+    @Volatile
+    private var function0Class: Class<*>? = null
+
+    @Volatile
+    private var unitInstance: Any? = null
 
     fun install(module: XposedInterface, classLoader: ClassLoader, log: (String) -> Unit) {
         logSink = log
+        resolveModelTypes(classLoader, log)
 
-        val viewClasses = resolve(classLoader, VIEW_BINDER_CLASSES, log)
         val uriClasses = resolve(classLoader, URI_SOURCE_CLASSES, log)
-
-        var hooks = 0
-        hooks += hookMethods(module, viewClasses, ::isViewMethod, log)
-        hooks += hookMethods(module, uriClasses, ::isUriMethod, log)
-        log("copy injector ready: hooks=$hooks")
+        var hooks = hookMethods(module, uriClasses, ::isUriMethod, log)
+        hooks += hookUpdateActions(module, classLoader, log)
+        log("copy injector ready: hooks=$hooks model=${viewModelCtor != null}")
     }
 
-    // --- hook wiring -------------------------------------------------------------------
+    // --- type resolution & hook wiring -------------------------------------------------
+
+    private fun resolveModelTypes(classLoader: ClassLoader, log: (String) -> Unit) {
+        runCatching {
+            val appearance = Class.forName(APPEARANCE_CLASS, false, classLoader)
+            val viewModel = Class.forName(VIEWMODEL_CLASS, false, classLoader)
+            val function0 = Class.forName("kotlin.jvm.functions.Function0", false, classLoader)
+            appearanceCtor = appearance.getDeclaredConstructor(
+                Drawable::class.java, CharSequence::class.java, CharSequence::class.java,
+                Boolean::class.javaPrimitiveType
+            )
+            viewModelCtor = viewModel.getDeclaredConstructor(
+                appearance, Int::class.javaPrimitiveType, Boolean::class.javaPrimitiveType, function0
+            )
+            function0Class = function0
+            unitInstance = runCatching {
+                Class.forName("kotlin.Unit", false, classLoader).getField("INSTANCE").get(null)
+            }.getOrNull()
+            log("model types resolved")
+        }.onFailure { log("model types failed: ${it.javaClass.simpleName}: ${it.message}") }
+    }
 
     private fun resolve(
         classLoader: ClassLoader,
@@ -93,21 +119,24 @@ object CopyButtonInjector {
                 }.onFailure {
                     log("copy hook ${clazz.simpleName}#${method.name} failed: ${it.javaClass.simpleName}")
                 }.getOrDefault(false)
-                if (ok) {
-                    hooks++
-                    log("copy hook ${clazz.name}#${method.name}")
-                }
+                if (ok) hooks++
             }
         }
         return hooks
     }
 
-    private fun isViewMethod(method: Method): Boolean {
-        if (Modifier.isAbstract(method.modifiers)) return false
-        val name = method.name.lowercase()
-        if (name.contains("bind") || name.contains("updateaction")) return true
-        return method.parameterTypes.any { View::class.java.isAssignableFrom(it) }
-    }
+    private fun hookUpdateActions(
+        module: XposedInterface,
+        classLoader: ClassLoader,
+        log: (String) -> Unit
+    ): Int = runCatching {
+        val binder = Class.forName(SHELF_BINDER_CLASS, false, classLoader)
+        val method = binder.declaredMethods.first { it.name == "access\$updateActions" }
+        module.hook(method, UpdateActionsHooker::class.java)
+        log("hooked $SHELF_BINDER_CLASS#access\$updateActions for model injection")
+        1
+    }.onFailure { log("hook updateActions failed: ${it.javaClass.simpleName}: ${it.message}") }
+        .getOrDefault(0)
 
     private fun isUriMethod(method: Method): Boolean {
         if (Modifier.isAbstract(method.modifiers)) return false
@@ -115,24 +144,58 @@ object CopyButtonInjector {
         return method.parameterTypes.any { it == Uri::class.java }
     }
 
-    // --- runtime: invoked from CopyHooker.after ----------------------------------------
+    // --- model injection (UpdateActionsHooker.before) ----------------------------------
 
-    fun onHookedCall(member: Member?, thisObject: Any?, args: Array<Any?>?, result: Any?) {
+    fun onUpdateActionsBefore(args: Array<Any?>?) {
         val log = logSink ?: return
         runCatching {
-            captureUri(args, result, log)
-
-            val name = member?.name?.lowercase().orEmpty()
-            val view = findView(thisObject, args)
-            if (view != null) shelfRef = WeakReference(view)
-
-            // (Re)inject only when the toolbar is (re)built or a fresh view surfaced; injection is
-            // idempotent so extra posts are harmless.
-            if (view != null || name.contains("bind") || name.contains("updateaction")) {
-                val target = view ?: shelfRef?.get()
-                target?.post { runCatching { ensureCopyChip(target, log) } }
+            val a = args ?: return
+            val list = a.getOrNull(1) as? List<*> ?: return
+            val context = (a.getOrNull(3) as? android.view.View)?.context ?: return
+            val model = buildCopyModel(context) ?: return
+            // Prepend so Copy is the leftmost chip; the framework renders the whole list itself.
+            a[1] = ArrayList<Any?>(list.size + 1).apply {
+                add(model)
+                addAll(list)
             }
-        }.onFailure { log("copy onHookedCall failed: ${it.javaClass.simpleName}: ${it.message}") }
+        }.onFailure { log("updateActions inject failed: ${it.javaClass.simpleName}: ${it.message}") }
+    }
+
+    private fun buildCopyModel(context: Context): Any? {
+        val apCtor = appearanceCtor ?: return null
+        val vmCtor = viewModelCtor ?: return null
+        val icon = CopyIconDrawable(DEFAULT_ICON_COLOR, dp(context, 24f))
+        // (icon, label, description, tint=true). Empty label → icon-only chip like Share/Edit;
+        // tint=true lets the framework recolour our glyph to the theme (handled in CopyIconDrawable).
+        val appearance = apCtor.newInstance(icon, "", "Copy screenshot", true)
+        val onClicked = buildOnClicked(context) ?: return null
+        return vmCtor.newInstance(appearance, COPY_ACTION_ID, true, onClicked)
+    }
+
+    /** A `Function0` implemented in SystemUI's classloader (a Kotlin lambda from our APK wouldn't be type-compatible). */
+    private fun buildOnClicked(context: Context): Any? {
+        val function0 = function0Class ?: return null
+        val handler = InvocationHandler { _, method, _ ->
+            when (method.name) {
+                "invoke" -> {
+                    onCopyClicked(context)
+                    unitInstance
+                }
+                "equals" -> false
+                "hashCode" -> COPY_ACTION_ID
+                "toString" -> "ClipticCopyOnClicked"
+                else -> null
+            }
+        }
+        return Proxy.newProxyInstance(function0.classLoader, arrayOf(function0), handler)
+    }
+
+    // --- screenshot Uri capture (CopyHooker.after) -------------------------------------
+
+    fun onHookedCall(args: Array<Any?>?, result: Any?) {
+        val log = logSink ?: return
+        runCatching { captureUri(args, result, log) }
+            .onFailure { log("copy onHookedCall failed: ${it.javaClass.simpleName}: ${it.message}") }
     }
 
     private fun captureUri(args: Array<Any?>?, result: Any?, log: (String) -> Unit) {
@@ -147,8 +210,7 @@ object CopyButtonInjector {
         }
     }
 
-    private fun isScreenshotUri(uri: Uri): Boolean =
-        uri.toString().contains("images/media")
+    private fun isScreenshotUri(uri: Uri): Boolean = uri.toString().contains("images/media")
 
     /**
      * SystemUI sometimes carries a cross-user authority like `0@media`; the app process resolves
@@ -160,110 +222,7 @@ object CopyButtonInjector {
         return uri.buildUpon().authority(authority.substringAfterLast('@')).build()
     }
 
-    private fun findView(thisObject: Any?, args: Array<Any?>?): View? {
-        (thisObject as? View)?.let { return it }
-        return args?.filterIsInstance<View>()?.firstOrNull()
-    }
-
-    // --- chip injection ----------------------------------------------------------------
-
-    private fun ensureCopyChip(anchor: View, log: (String) -> Unit) {
-        val root = anchor.rootView ?: anchor
-        val actionsId = root.resources.getIdentifier(
-            "screenshot_actions", "id", AppProtocol.SYSTEMUI_PACKAGE
-        )
-        if (actionsId == 0) {
-            log("copy injector: screenshot_actions id not found")
-            return
-        }
-        val container = root.findViewById<View>(actionsId) as? LinearLayout ?: return
-        if (container.findViewWithTag<View>(CHIP_TAG) != null) return
-
-        val chip = buildChip(container) ?: return
-        container.addView(chip, 0)
-        // Once the row is laid out, match a native sibling's exact height so our footprint is a
-        // perfect square (circle) regardless of how the framework sizes its chips.
-        container.post {
-            runCatching {
-                val size = firstChipTemplate(container)?.height?.takeIf { it > 0 } ?: return@runCatching
-                val lp = chip.layoutParams ?: return@runCatching
-                if (lp.width != size || lp.height != size) {
-                    lp.width = size
-                    lp.height = size
-                    chip.layoutParams = lp
-                }
-            }
-        }
-        log("copy chip injected into screenshot_actions")
-    }
-
-    /**
-     * Builds a round, icon-only chip mimicking an existing sibling (the native Share/Edit chips
-     * are circular icon buttons): clone its background/layout/padding for the same shape and size,
-     * and place a stock-style copy glyph ([CopyIconDrawable]) tinted to match the system icons.
-     */
-    private fun buildChip(container: LinearLayout): View? {
-        val context = container.context
-        val template = firstChipTemplate(container)
-        val templateIcon = template?.let { findImageView(it) }
-        val tint = iconTint(template, templateIcon)
-        val iconSize = (templateIcon?.layoutParams?.height?.takeIf { it > 0 })
-            ?: (templateIcon?.layoutParams?.width?.takeIf { it > 0 })
-            ?: dp(context, 24f)
-
-        val chip = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            isClickable = true
-            isFocusable = true
-            tag = CHIP_TAG
-            contentDescription = "Copy"
-            // Native chips are square (circular bg); start square so we don't wrap to the icon
-            // width. ensureCopyChip refines this to a sibling's exact size after layout.
-            layoutParams = cloneLayoutParams(template?.layoutParams).apply {
-                val d = chipDiameter(context, template)
-                width = d
-                height = d
-            }
-            if (template != null) {
-                // Clone the drawable AND the View-level tint (the accent colour is applied as a
-                // backgroundTintList, not baked into the drawable) so we match the system chips.
-                template.background?.constantState?.newDrawable(context.resources)?.mutate()
-                    ?.let { background = it }
-                backgroundTintList = template.backgroundTintList
-                backgroundTintMode = template.backgroundTintMode
-                setPaddingRelative(
-                    template.paddingStart, template.paddingTop,
-                    template.paddingEnd, template.paddingBottom
-                )
-            } else {
-                val pad = dp(context, 10f)
-                setPaddingRelative(pad, pad, pad, pad)
-            }
-        }
-
-        val icon = ImageView(context).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            setImageDrawable(CopyIconDrawable(tint, iconSize))
-            layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
-        }
-        chip.addView(icon)
-        chip.setOnClickListener { onCopyClicked(context) }
-        return chip
-    }
-
-    /** Best-effort square size for the chip, using whatever concrete dimension the template has. */
-    private fun chipDiameter(context: Context, template: ViewGroup?): Int = sequenceOf(
-        template?.height ?: 0,
-        template?.layoutParams?.height ?: 0,
-        template?.layoutParams?.width ?: 0,
-    ).firstOrNull { it > 0 } ?: dp(context, 48f)
-
-    private fun iconTint(template: ViewGroup?, icon: ImageView?): Int {
-        icon?.imageTintList?.defaultColor?.let { return it }
-        template?.let { findTextView(it) }?.let { return it.currentTextColor }
-        return Color.WHITE
-    }
+    // --- click → broadcast -------------------------------------------------------------
 
     private fun onCopyClicked(context: Context) {
         val log = logSink ?: {}
@@ -295,40 +254,38 @@ object CopyButtonInjector {
         )?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
     }.getOrNull()
 
-    // --- view helpers ------------------------------------------------------------------
+    private fun dp(context: Context, value: Float): Int =
+        (value * context.resources.displayMetrics.density).toInt()
 
-    private fun firstChipTemplate(container: LinearLayout): ViewGroup? {
-        for (i in 0 until container.childCount) {
-            val child = container.getChildAt(i)
-            if (child is ViewGroup && child.tag != CHIP_TAG) return child
+    class CopyHooker : XposedInterface.Hooker {
+        companion object {
+            @JvmStatic
+            fun after(callback: XposedInterface.AfterHookCallback) {
+                runCatching { onHookedCall(callback.args, callback.result) }
+            }
         }
-        return null
     }
 
-    private fun findTextView(view: View): TextView? = when (view) {
-        is TextView -> view
-        is ViewGroup -> (0 until view.childCount)
-            .firstNotNullOfOrNull { findTextView(view.getChildAt(it)) }
-        else -> null
-    }
-
-    private fun findImageView(view: View): ImageView? = when (view) {
-        is ImageView -> view
-        is ViewGroup -> (0 until view.childCount)
-            .firstNotNullOfOrNull { findImageView(view.getChildAt(it)) }
-        else -> null
+    class UpdateActionsHooker : XposedInterface.Hooker {
+        companion object {
+            @JvmStatic
+            fun before(callback: XposedInterface.BeforeHookCallback) {
+                runCatching { onUpdateActionsBefore(callback.args) }
+            }
+        }
     }
 
     /**
      * Stock-style "content copy" glyph drawn programmatically (two overlapping rounded sheets) so
-     * the module needs no bundled drawable resource. Stroked and tinted to match the system icons.
+     * the module needs no bundled drawable resource. Honours tint applied by the framework
+     * ([setTint] / [setTintList] / [setColorFilter]) so it matches the system icon colour.
      */
-    private class CopyIconDrawable(tint: Int, private val sizePx: Int) : Drawable() {
+    private class CopyIconDrawable(defaultColor: Int, private val sizePx: Int) : Drawable() {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeJoin = Paint.Join.ROUND
             strokeCap = Paint.Cap.ROUND
-            color = tint
+            color = defaultColor
         }
 
         override fun getIntrinsicWidth() = sizePx
@@ -342,7 +299,6 @@ object CopyButtonInjector {
             val top = b.top + (b.height() - s) / 2f
             paint.strokeWidth = s * 0.085f
             val r = s * 0.14f
-            // Front sheet (bottom-right) and back sheet (peeking top-left), classic copy glyph.
             val fl = left + s * 0.30f; val ft = top + s * 0.30f
             val fr = left + s * 0.92f; val fb = top + s * 0.92f
             val gap = s * 0.20f
@@ -351,38 +307,24 @@ object CopyButtonInjector {
         }
 
         override fun setAlpha(alpha: Int) { paint.alpha = alpha }
-        override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter }
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            paint.colorFilter = colorFilter
+            invalidateSelf()
+        }
+        override fun setTint(tintColor: Int) { paint.color = tintColor; invalidateSelf() }
+        override fun setTintList(tint: ColorStateList?) {
+            tint?.defaultColor?.let { paint.color = it; invalidateSelf() }
+        }
         @Deprecated("deprecated in Drawable", ReplaceWith("PixelFormat.TRANSLUCENT"))
         override fun getOpacity() = PixelFormat.TRANSLUCENT
     }
 
-    private fun cloneLayoutParams(source: ViewGroup.LayoutParams?): LinearLayout.LayoutParams =
-        when (source) {
-            is ViewGroup.MarginLayoutParams -> LinearLayout.LayoutParams(source)
-            is ViewGroup.LayoutParams -> LinearLayout.LayoutParams(source)
-            else -> LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-    private fun dp(context: Context, value: Float): Int =
-        (value * context.resources.displayMetrics.density).toInt()
-
-    class CopyHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun after(callback: XposedInterface.AfterHookCallback) {
-                runCatching {
-                    onHookedCall(callback.member, callback.thisObject, callback.args, callback.result)
-                }
-            }
-        }
-    }
-
-    private val VIEW_BINDER_CLASSES = listOf(
-        "com.android.systemui.screenshot.ui.binder.ScreenshotShelfViewBinder",
-        "com.android.systemui.screenshot.ui.binder.ActionButtonViewBinder"
-    )
+    private const val SHELF_BINDER_CLASS =
+        "com.android.systemui.screenshot.ui.binder.ScreenshotShelfViewBinder"
+    private const val APPEARANCE_CLASS =
+        "com.android.systemui.screenshot.ui.viewmodel.ActionButtonAppearance"
+    private const val VIEWMODEL_CLASS =
+        "com.android.systemui.screenshot.ui.viewmodel.ActionButtonViewModel"
 
     private val URI_SOURCE_CLASSES = listOf(
         "com.android.systemui.screenshot.ImageExporter",
@@ -390,6 +332,9 @@ object CopyButtonInjector {
         "com.android.systemui.screenshot.ScreenshotController"
     )
 
-    private const val CHIP_TAG = "cliptic_copy_chip"
+    // Stable, unlikely-to-collide id so the framework diffs our chip as the same item across the
+    // repeated updateActions calls (native ids come from a small incrementing counter).
+    private const val COPY_ACTION_ID = 0x436F7079 // "Copy"
+    private const val DEFAULT_ICON_COLOR = 0xFF1F1F1F.toInt()
     private const val MAX_HOOKS = 32
 }

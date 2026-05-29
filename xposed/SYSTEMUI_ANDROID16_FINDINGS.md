@@ -54,10 +54,18 @@ com.android.systemui.screenshot.ui.ScreenshotShelfView            id=no-id
   - fields: `actionExecutor: ActionExecutor`, `actionIntentCreator: ActionIntentCreator`, …
 - `com.android.systemui.screenshot.ui.binder.ScreenshotShelfViewBinder`
   - `bind(ScreenshotShelfView, ScreenshotViewModel, ScreenshotAnimationController, LayoutInflater, …)`
-  - `access$updateActions(binder, List<ActionButtonViewModel>, …)` — populates the chip row
+  - `access$updateActions(ScreenshotShelfViewBinder, List<ActionButtonViewModel>, AnimationState, ScreenshotShelfView, LayoutInflater)`
+    — **this is the injection point**: the `List` arg is the full chip set the row will render.
 - `com.android.systemui.screenshot.ui.binder.ActionButtonViewBinder`
-  - `bind(LinearLayout buttonView, ActionButtonViewModel)` — binds one chip
-- `com.android.systemui.screenshot.ui.viewmodel.ActionButtonViewModel` — chip model (icon/label/onClick)
+  - `static bind(View buttonView, ActionButtonViewModel)` — binds one chip
+- `com.android.systemui.screenshot.ui.viewmodel.ActionButtonViewModel` — chip model. Ctor (verbatim):
+  `ActionButtonViewModel(ActionButtonAppearance appearance, int id, boolean visible, kotlin.jvm.functions.Function0 onClicked)`.
+  Fields: `appearance, id, nextId, onClicked, visible`. Native `id`s come from a small incrementing
+  counter, so a large constant id (we use `0x436F7079`) won't collide and stays diff-stable.
+- `com.android.systemui.screenshot.ui.viewmodel.ActionButtonAppearance` — chip appearance. Ctor:
+  `ActionButtonAppearance(Drawable icon, CharSequence label, CharSequence description, boolean tint)`.
+  Empty `label` ⇒ icon-only chip; `description` becomes the content-description; `tint=true` lets the
+  framework recolour the icon to the theme (a custom `Drawable` must honour `setTint`/`setTintList`).
 - `com.android.systemui.screenshot.ActionIntentCreator`
   - `createShare(Uri, String mime, String)`, `createEdit(Uri, …)` — Uri-bearing
 - `com.android.systemui.screenshot.ImageExporter`
@@ -72,25 +80,37 @@ prefix-less `content://media/external/images/media/<id>`). Reliably available at
 
 ## Copy button — implemented (`CopyButtonInjector`)
 
-Verified working on-device (Pixel 8, Android 16). The implementation took the **fallback**
-(programmatic view injection) path because it needs no knowledge of the `ActionButtonViewModel`
-constructor and survives SystemUI churn:
+Verified working on-device (Pixel 8, Android 16). The chip is added by **model injection**, NOT by
+mutating the view tree:
 
-- One shared after-hook ([`CopyHooker`]) is installed on two method sets:
-  - **View binders** (`ScreenshotShelfViewBinder#bind`/`access$updateActions`,
-    `ActionButtonViewBinder#bind`) — give the live `ScreenshotShelfView`. The screenshot UI runs
-    in a **separate process** `com.android.systemui:screenshot`, so the module loads/hooks there.
-  - **Uri sources** (`ImageExporter#publishEntry/writeImage/createEntry`,
-    `ActionIntentCreator#createShare/createEdit`, `ScreenshotController#access$logScreenshotResultStatus`)
-    — the latest screenshot `Uri` is stashed in `latestUri`.
-- On each toolbar (re)build we `post` an idempotent re-insert of a tagged Copy chip into
-  `LinearLayout id=screenshot_actions` (resolved via `getIdentifier("screenshot_actions","id","com.android.systemui")`).
-  `updateActions` clears the row each pass, so re-inserting on every call keeps exactly one chip.
-- The chip mimics a sibling chip's `LayoutParams` / background / text styling so it looks native.
-- The Uri is normalized (`<n>@media` → `media`) so the app process can resolve it.
-- On tap: read the shared secret from `XposedSecretProvider`, then broadcast
-  `ACTION_COPY_SCREENSHOT` to `art.yniyniyni.cliptic` with Uri + secret. The app caches, copies to
-  the clipboard, toasts, and ACKs back → `CopyAckReceiver` trashes the original (`result=1`).
+- **Why not view injection:** an earlier version added a raw `View` at index 0 of the
+  framework-managed `LinearLayout id=screenshot_actions`. `updateActions` reconciles that row's
+  children **by index** (reuse child[i] for action[i], add/remove the remainder), so an extra child
+  shifts every index and the binder ends up **appending duplicate native chips**. It also blinked:
+  re-adding on a `post{}` lands one frame after the framework's clear+rebuild, so each of the ~3
+  `updateActions` passes briefly drew the row without our chip. Don't inject views into that row.
+- **What works:** a *before* hook on `ScreenshotShelfViewBinder.access$updateActions(…)` prepends a
+  Copy `ActionButtonViewModel` to the `List` argument (`callback.args[1]`, replaced with
+  `[ours] + original`). The framework then builds, styles, recycles, and animates our chip exactly
+  like Share/Edit — no duplicates, no blink, native circular styling for free. The stable `id`
+  keeps it diff-stable across the repeated `updateActions` calls.
+- **Building the model** (reflection against SystemUI's classloader):
+  `ActionButtonAppearance(CopyIconDrawable, "" /*label*/, "Copy screenshot" /*desc*/, true /*tint*/)`
+  → `ActionButtonViewModel(appearance, 0x436F7079, true, onClicked)`. `onClicked` is a
+  `kotlin.jvm.functions.Function0` created via `java.lang.reflect.Proxy` over **SystemUI's**
+  `Function0` interface — a Kotlin lambda compiled in our APK implements *our* `Function0` and would
+  not be type-compatible with the framework ctor. The proxy's `invoke` returns SystemUI's
+  `kotlin.Unit.INSTANCE`.
+- **Icon:** `CopyIconDrawable` draws the content-copy glyph and honours `setTint`/`setTintList`/
+  `setColorFilter`, so `tint=true` recolours it to the theme (matches the native icon colour).
+- **Uri capture:** a separate after-hook ([`CopyHooker`]) on the Uri-bearing methods of
+  `ImageExporter` / `ActionIntentCreator` / `ScreenshotController` stashes the latest screenshot
+  `Uri` in `latestUri`, normalized (`<n>@media` → `media`) so the app process can resolve it. The
+  screenshot UI runs in a **separate process** `com.android.systemui:screenshot`; reinstalling the
+  module requires killing *both* `com.android.systemui` and `com.android.systemui:screenshot`.
+- **On tap:** read the shared secret from `XposedSecretProvider`, broadcast `ACTION_COPY_SCREENSHOT`
+  to `art.yniyniyni.cliptic` with Uri + secret. The app caches, copies to the clipboard, toasts,
+  and ACKs back → `CopyAckReceiver` trashes the original (`result=1`).
 
 `isModuleActive` is hooked in the app process (`AppHook`) to return `true`, so the standalone UI
 shows "LSPosed active".
