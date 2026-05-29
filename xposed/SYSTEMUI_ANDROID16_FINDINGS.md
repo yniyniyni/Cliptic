@@ -70,13 +70,30 @@ prefix-less `content://media/external/images/media/<id>`). Reliably available at
 `ActionIntentCreator.createShare/createEdit`, `ImageExporter.publishEntry/writeImage`, and
 `ScreenshotController.access$logScreenshotResultStatus`.
 
-## Implications for the Copy button (next iteration)
+## Copy button — implemented (`CopyButtonInjector`)
 
-- **Preferred:** inject a Copy `ActionButtonViewModel` into the list consumed by
-  `ScreenshotShelfViewBinder.updateActions(...)` (hook it, append our model), reusing the
-  framework's chip styling/binding. Source the Uri from the same `ScreenshotData` /
-  `ActionIntentCreator` path.
-- **Fallback:** programmatically add a chip view into `LinearLayout id=screenshot_actions`
-  (resolve via `ScreenshotShelfView` → `screenshot_static` → `actions_container` → `screenshot_actions`).
-- On click, send `ACTION_COPY_SCREENSHOT` (to be added to `AppProtocol`) to `art.yniyniyni.cliptic`
-  with the Uri + shared secret; the app already handles copy + ACK.
+Verified working on-device (Pixel 8, Android 16). The implementation took the **fallback**
+(programmatic view injection) path because it needs no knowledge of the `ActionButtonViewModel`
+constructor and survives SystemUI churn:
+
+- One shared after-hook ([`CopyHooker`]) is installed on two method sets:
+  - **View binders** (`ScreenshotShelfViewBinder#bind`/`access$updateActions`,
+    `ActionButtonViewBinder#bind`) — give the live `ScreenshotShelfView`. The screenshot UI runs
+    in a **separate process** `com.android.systemui:screenshot`, so the module loads/hooks there.
+  - **Uri sources** (`ImageExporter#publishEntry/writeImage/createEntry`,
+    `ActionIntentCreator#createShare/createEdit`, `ScreenshotController#access$logScreenshotResultStatus`)
+    — the latest screenshot `Uri` is stashed in `latestUri`.
+- On each toolbar (re)build we `post` an idempotent re-insert of a tagged Copy chip into
+  `LinearLayout id=screenshot_actions` (resolved via `getIdentifier("screenshot_actions","id","com.android.systemui")`).
+  `updateActions` clears the row each pass, so re-inserting on every call keeps exactly one chip.
+- The chip mimics a sibling chip's `LayoutParams` / background / text styling so it looks native.
+- The Uri is normalized (`<n>@media` → `media`) so the app process can resolve it.
+- On tap: read the shared secret from `XposedSecretProvider`, then broadcast
+  `ACTION_COPY_SCREENSHOT` to `art.yniyniyni.cliptic` with Uri + secret. The app caches, copies to
+  the clipboard, toasts, and ACKs back → `CopyAckReceiver` trashes the original (`result=1`).
+
+`isModuleActive` is hooked in the app process (`AppHook`) to return `true`, so the standalone UI
+shows "LSPosed active".
+
+`SystemUiInspector` is retained (no longer invoked) for re-running discovery if a SystemUI build
+changes the class/view map above.

@@ -19,7 +19,9 @@ object SystemUIHook {
     private var logSink: ((String) -> Unit)? = null
 
     fun install(module: XposedInterface, classLoader: ClassLoader, log: (String) -> Unit) {
-        SystemUiInspector.run(module, classLoader, log)
+        // SystemUiInspector.run(...) remains available for re-running on-device discovery if a
+        // SystemUI build changes; the working path is now the Copy chip injector below.
+        CopyButtonInjector.install(module, classLoader, log)
         secretProvider = { context -> readExpectedSecret(context) }
         logSink = log
         runCatching {
