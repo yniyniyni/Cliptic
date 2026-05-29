@@ -2,11 +2,17 @@ package art.yniyniyni.cliptic.xposed.hooks
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -175,48 +181,88 @@ object CopyButtonInjector {
 
         val chip = buildChip(container) ?: return
         container.addView(chip, 0)
+        // Once the row is laid out, match a native sibling's exact height so our footprint is a
+        // perfect square (circle) regardless of how the framework sizes its chips.
+        container.post {
+            runCatching {
+                val size = firstChipTemplate(container)?.height?.takeIf { it > 0 } ?: return@runCatching
+                val lp = chip.layoutParams ?: return@runCatching
+                if (lp.width != size || lp.height != size) {
+                    lp.width = size
+                    lp.height = size
+                    chip.layoutParams = lp
+                }
+            }
+        }
         log("copy chip injected into screenshot_actions")
     }
 
-    /** Builds a chip that mimics the styling of an existing sibling chip (background/text/sizing). */
+    /**
+     * Builds a round, icon-only chip mimicking an existing sibling (the native Share/Edit chips
+     * are circular icon buttons): clone its background/layout/padding for the same shape and size,
+     * and place a stock-style copy glyph ([CopyIconDrawable]) tinted to match the system icons.
+     */
     private fun buildChip(container: LinearLayout): View? {
         val context = container.context
         val template = firstChipTemplate(container)
-        val templateLabel = template?.let { findTextView(it) }
+        val templateIcon = template?.let { findImageView(it) }
+        val tint = iconTint(template, templateIcon)
+        val iconSize = (templateIcon?.layoutParams?.height?.takeIf { it > 0 })
+            ?: (templateIcon?.layoutParams?.width?.takeIf { it > 0 })
+            ?: dp(context, 24f)
 
         val chip = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER
             isClickable = true
             isFocusable = true
             tag = CHIP_TAG
-            layoutParams = cloneLayoutParams(template?.layoutParams)
-            template?.background?.constantState?.newDrawable(context.resources)?.mutate()
-                ?.let { background = it }
+            contentDescription = "Copy"
+            // Native chips are square (circular bg); start square so we don't wrap to the icon
+            // width. ensureCopyChip refines this to a sibling's exact size after layout.
+            layoutParams = cloneLayoutParams(template?.layoutParams).apply {
+                val d = chipDiameter(context, template)
+                width = d
+                height = d
+            }
             if (template != null) {
+                // Clone the drawable AND the View-level tint (the accent colour is applied as a
+                // backgroundTintList, not baked into the drawable) so we match the system chips.
+                template.background?.constantState?.newDrawable(context.resources)?.mutate()
+                    ?.let { background = it }
+                backgroundTintList = template.backgroundTintList
+                backgroundTintMode = template.backgroundTintMode
                 setPaddingRelative(
                     template.paddingStart, template.paddingTop,
                     template.paddingEnd, template.paddingBottom
                 )
             } else {
-                val pad = dp(context, 12f)
-                setPaddingRelative(pad, dp(context, 8f), pad, dp(context, 8f))
+                val pad = dp(context, 10f)
+                setPaddingRelative(pad, pad, pad, pad)
             }
         }
 
-        val label = TextView(context).apply {
-            text = "Copy"
-            isSingleLine = true
-            gravity = Gravity.CENTER
-            if (templateLabel != null) {
-                setTextColor(templateLabel.currentTextColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, templateLabel.textSize)
-                typeface = templateLabel.typeface
-            }
+        val icon = ImageView(context).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setImageDrawable(CopyIconDrawable(tint, iconSize))
+            layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
         }
-        chip.addView(label)
+        chip.addView(icon)
         chip.setOnClickListener { onCopyClicked(context) }
         return chip
+    }
+
+    /** Best-effort square size for the chip, using whatever concrete dimension the template has. */
+    private fun chipDiameter(context: Context, template: ViewGroup?): Int = sequenceOf(
+        template?.height ?: 0,
+        template?.layoutParams?.height ?: 0,
+        template?.layoutParams?.width ?: 0,
+    ).firstOrNull { it > 0 } ?: dp(context, 48f)
+
+    private fun iconTint(template: ViewGroup?, icon: ImageView?): Int {
+        icon?.imageTintList?.defaultColor?.let { return it }
+        template?.let { findTextView(it) }?.let { return it.currentTextColor }
+        return Color.WHITE
     }
 
     private fun onCopyClicked(context: Context) {
@@ -264,6 +310,50 @@ object CopyButtonInjector {
         is ViewGroup -> (0 until view.childCount)
             .firstNotNullOfOrNull { findTextView(view.getChildAt(it)) }
         else -> null
+    }
+
+    private fun findImageView(view: View): ImageView? = when (view) {
+        is ImageView -> view
+        is ViewGroup -> (0 until view.childCount)
+            .firstNotNullOfOrNull { findImageView(view.getChildAt(it)) }
+        else -> null
+    }
+
+    /**
+     * Stock-style "content copy" glyph drawn programmatically (two overlapping rounded sheets) so
+     * the module needs no bundled drawable resource. Stroked and tinted to match the system icons.
+     */
+    private class CopyIconDrawable(tint: Int, private val sizePx: Int) : Drawable() {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeJoin = Paint.Join.ROUND
+            strokeCap = Paint.Cap.ROUND
+            color = tint
+        }
+
+        override fun getIntrinsicWidth() = sizePx
+        override fun getIntrinsicHeight() = sizePx
+
+        override fun draw(canvas: Canvas) {
+            val b = bounds
+            val s = minOf(b.width(), b.height()).toFloat()
+            if (s <= 0f) return
+            val left = b.left + (b.width() - s) / 2f
+            val top = b.top + (b.height() - s) / 2f
+            paint.strokeWidth = s * 0.085f
+            val r = s * 0.14f
+            // Front sheet (bottom-right) and back sheet (peeking top-left), classic copy glyph.
+            val fl = left + s * 0.30f; val ft = top + s * 0.30f
+            val fr = left + s * 0.92f; val fb = top + s * 0.92f
+            val gap = s * 0.20f
+            canvas.drawRoundRect(left + s * 0.10f, top + s * 0.10f, fr - gap, fb - gap, r, r, paint)
+            canvas.drawRoundRect(fl, ft, fr, fb, r, r, paint)
+        }
+
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+        override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter }
+        @Deprecated("deprecated in Drawable", ReplaceWith("PixelFormat.TRANSLUCENT"))
+        override fun getOpacity() = PixelFormat.TRANSLUCENT
     }
 
     private fun cloneLayoutParams(source: ViewGroup.LayoutParams?): LinearLayout.LayoutParams =
