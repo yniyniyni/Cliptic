@@ -19,35 +19,15 @@ object SystemUIHook {
     private var logSink: ((String) -> Unit)? = null
 
     fun install(module: XposedInterface, classLoader: ClassLoader, log: (String) -> Unit) {
-        inspect(classLoader, log)
+        SystemUiInspector.run(module, classLoader, log)
         secretProvider = { context -> readExpectedSecret(context) }
         logSink = log
         runCatching {
             val attach = Application::class.java.getDeclaredMethod("attach", Context::class.java)
-            module.hook(attach).intercept(ApplicationAttachHooker())
+            module.hook(attach, ApplicationAttachHooker::class.java)
             log("Application.attach hook installed for SystemUI context capture")
         }.onFailure { throwable ->
             log("Application.attach hook failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
-        }
-    }
-
-    fun inspect(classLoader: ClassLoader, log: (String) -> Unit) {
-        runCatching {
-            val screenshotView = Class.forName(SCREENSHOT_VIEW_CLASS, false, classLoader)
-            val methods = screenshotView.declaredMethods
-                .map { method -> "${method.name}(${method.parameterTypes.joinToString { it.simpleName }})" }
-                .sorted()
-                .take(MAX_LOGGED_MEMBERS)
-            val fields = screenshotView.declaredFields
-                .map { field -> "${field.type.simpleName} ${field.name}" }
-                .sorted()
-                .take(MAX_LOGGED_MEMBERS)
-
-            log("found $SCREENSHOT_VIEW_CLASS")
-            log("candidate methods=${methods.joinToString()}")
-            log("candidate fields=${fields.joinToString()}")
-        }.onFailure { throwable ->
-            log("SystemUI screenshot inspection failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
         }
     }
 
@@ -103,6 +83,4 @@ object SystemUIHook {
         }
     }
 
-    private const val SCREENSHOT_VIEW_CLASS = "com.android.systemui.screenshot.ScreenshotView"
-    private const val MAX_LOGGED_MEMBERS = 24
 }
