@@ -159,9 +159,8 @@ private fun ClipticApp() {
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .statusBarsPadding()
                     .padding(horizontal = 20.dp)
-                    .padding(top = 16.dp, bottom = 24.dp),
+                    .padding(top = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
@@ -445,9 +444,9 @@ private fun HeroStatusCard(
             Surface(
                 modifier = Modifier.size(44.dp),
                 shape = RoundedCornerShape(14.dp),
-                color = colorScheme.surface.copy(alpha = 0.72f),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                shadowElevation = 4.dp,
+                color = colorScheme.surface.copy(alpha = 0.30f),
+                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                shadowElevation = 0.dp,
                 tonalElevation = 0.dp
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -462,9 +461,11 @@ private fun HeroStatusCard(
         }
 
         Text(
-            text = if (serviceRunning) "Automagic\nSync" else "Automagic\nOff",
+            text = if (serviceRunning) "Automagic Sync" else "Automagic Off",
             style = MaterialTheme.typography.displayLarge,
-            color = colorScheme.onBackground
+            color = colorScheme.onBackground,
+            maxLines = 1,
+            softWrap = false
         )
 
         if (serviceRunning) {
@@ -526,9 +527,9 @@ private fun GlassCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.50f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        shadowElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.30f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        shadowElevation = 0.dp,
         tonalElevation = 0.dp
     ) {
         Column(
