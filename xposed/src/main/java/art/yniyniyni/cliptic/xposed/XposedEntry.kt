@@ -1,6 +1,7 @@
 package art.yniyniyni.cliptic.xposed
 
 import art.yniyniyni.cliptic.xposed.hooks.AppHook
+import art.yniyniyni.cliptic.xposed.hooks.MarkupCopyInjector
 import art.yniyniyni.cliptic.xposed.hooks.SystemUIHook
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
@@ -18,6 +19,7 @@ class XposedEntry(
         when (param.packageName) {
             AppProtocol.SYSTEMUI_PACKAGE -> SystemUIHook.install(this, param.classLoader, ::logSafe)
             AppProtocol.APP_PACKAGE -> AppHook.install(this, param.classLoader, ::logSafe)
+            AppProtocol.MARKUP_PACKAGE -> MarkupCopyInjector.install(this, param.classLoader, ::logSafe)
         }
     }
 
