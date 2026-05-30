@@ -19,9 +19,11 @@ class ScreenshotTileService : TileService() {
     }
 
     private fun updateTile() {
-        val enabled = ClipticSettings.prefs(this).getBoolean(ClipticSettings.KEY_AUTO_COPY_ENABLED, true)
+        // Reflect whether the service will actually run, not just the auto-copy pref: in
+        // LSPosed-only mode auto-copy can be on while no service runs.
+        val active = ClipticSettings.shouldRunScreenshotService(this)
         qsTile?.apply {
-            state = if (enabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             label = "Cliptic"
             updateTile()
         }

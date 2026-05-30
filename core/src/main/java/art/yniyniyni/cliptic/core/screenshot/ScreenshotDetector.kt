@@ -5,21 +5,26 @@ import android.content.Context
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
-import android.os.Looper
+import android.os.HandlerThread
 import android.provider.MediaStore
 
 class ScreenshotDetector(
     private val context: Context,
     private val onScreenshotDetected: (uri: Uri) -> Unit
 ) {
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private var workerThread: HandlerThread? = null
+    private var workerHandler: Handler? = null
     private var observer: ContentObserver? = null
     private var lastProcessedUri: Uri? = null
     private var lastProcessedAtMs: Long = 0L
 
     fun start() {
         if (observer != null) return
-        observer = object : ContentObserver(mainHandler) {
+        val thread = HandlerThread("ScreenshotDetector").also { it.start() }
+        val handler = Handler(thread.looper)
+        workerThread = thread
+        workerHandler = handler
+        observer = object : ContentObserver(handler) {
             override fun onChange(selfChange: Boolean) {
                 handleChange()
             }
@@ -39,9 +44,13 @@ class ScreenshotDetector(
     fun stop() {
         observer?.let(context.contentResolver::unregisterContentObserver)
         observer = null
-        mainHandler.removeCallbacksAndMessages(null)
+        workerHandler?.removeCallbacksAndMessages(null)
+        workerHandler = null
+        workerThread?.quitSafely()
+        workerThread = null
     }
 
+    // Runs on the worker thread (the observer is registered with workerHandler).
     private fun handleChange() {
         val screenshotUri = queryLatestScreenshot() ?: return
         val now = System.currentTimeMillis()
@@ -50,7 +59,7 @@ class ScreenshotDetector(
         }
         lastProcessedUri = screenshotUri
         lastProcessedAtMs = now
-        mainHandler.postDelayed({ onScreenshotDetected(screenshotUri) }, PROCESSING_DELAY_MS)
+        workerHandler?.postDelayed({ onScreenshotDetected(screenshotUri) }, PROCESSING_DELAY_MS)
     }
 
     private fun queryLatestScreenshot(): Uri? {

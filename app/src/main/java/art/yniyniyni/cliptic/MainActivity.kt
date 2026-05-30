@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -68,13 +69,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import art.yniyniyni.cliptic.cleanup.OriginalScreenshotCleanup
 import art.yniyniyni.cliptic.core.util.XposedBridge
+import art.yniyniyni.cliptic.permission.MediaAccess
+import art.yniyniyni.cliptic.permission.MediaAccessLevel
+import art.yniyniyni.cliptic.service.ScreenshotService
 import art.yniyniyni.cliptic.settings.ClipticSettings
 import art.yniyniyni.cliptic.ui.theme.ClipticTheme
 
@@ -99,8 +103,8 @@ private fun ClipticApp() {
     var shareSheetEnabled by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SHARE_SHEET_ENABLED, true)) }
     var removeOriginalAfterCopy by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true)) }
     var startOnBoot by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_START_ON_BOOT, true)) }
-    var showServiceNotification by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SHOW_SERVICE_NOTIFICATION, true)) }
     var serviceRunning by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SERVICE_RUNNING, false)) }
+    var mediaAccess by remember { mutableStateOf(MediaAccess.level(context)) }
     var copyMode by remember { mutableStateOf(prefs.getString(ClipticSettings.KEY_COPY_MODE, ClipticSettings.COPY_MODE_AUTO) ?: ClipticSettings.COPY_MODE_AUTO) }
     var pendingOriginalCount by remember { mutableStateOf(OriginalScreenshotCleanup.pendingOriginalCount(context)) }
     var mediaManagementGranted by remember { mutableStateOf(OriginalScreenshotCleanup.canTrashSilently(context)) }
@@ -108,10 +112,17 @@ private fun ClipticApp() {
     var onboardingVisible by remember { mutableStateOf(!prefs.getBoolean(ClipticSettings.KEY_ONBOARDING_DONE, false)) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
+    val permissionRequest = remember { MediaAccess.requestPermissions + Manifest.permission.POST_NOTIFICATIONS }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
-        prefs.edit().putBoolean(ClipticSettings.KEY_ONBOARDING_DONE, true).apply()
+        val level = MediaAccess.level(context)
+        mediaAccess = level
+        // Only consider onboarding complete once the user has granted at least some image
+        // access. A flat denial leaves it incomplete so the prompt returns next launch.
+        if (level != MediaAccessLevel.NONE) {
+            prefs.edit().putBoolean(ClipticSettings.KEY_ONBOARDING_DONE, true).apply()
+        }
         onboardingVisible = false
     }
 
@@ -120,6 +131,7 @@ private fun ClipticApp() {
         OriginalScreenshotCleanup.attemptPendingTrash(context)
         pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
         mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
+        mediaAccess = MediaAccess.level(context)
     }
 
     DisposableEffect(context) {
@@ -129,6 +141,8 @@ private fun ClipticApp() {
                 OriginalScreenshotCleanup.attemptPendingTrash(context)
                 pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
                 mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
+                mediaAccess = MediaAccess.level(context)
+                serviceRunning = prefs.getBoolean(ClipticSettings.KEY_SERVICE_RUNNING, false)
             }
         }
         activity?.lifecycle?.addObserver(observer)
@@ -163,13 +177,24 @@ private fun ClipticApp() {
                     .padding(top = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Cliptic",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_tile_cliptic),
+                        contentDescription = null,
+                        tint = colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = "Cliptic",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = colorScheme.primary
+                    )
+                }
 
                 when (selectedTab) {
                     0 -> DashboardContent(
@@ -180,6 +205,14 @@ private fun ClipticApp() {
                         shareSheetEnabled = shareSheetEnabled,
                         removeOriginalAfterCopy = removeOriginalAfterCopy,
                         mediaManagementGranted = mediaManagementGranted,
+                        mediaAccess = mediaAccess,
+                        onFixMediaAccess = {
+                            if (mediaAccess == MediaAccessLevel.PARTIAL) {
+                                MediaAccess.openAppSettings(context)
+                            } else {
+                                permissionLauncher.launch(permissionRequest)
+                            }
+                        },
                         onPause = {
                             autoCopyEnabled = false
                             ClipticSettings.setAutoCopyEnabled(context, false)
@@ -187,8 +220,8 @@ private fun ClipticApp() {
                         },
                         onStart = {
                             autoCopyEnabled = true
-                            ClipticSettings.startScreenshotService(context)
-                            serviceRunning = true
+                            ClipticSettings.setAutoCopyEnabled(context, true)
+                            serviceRunning = ClipticSettings.shouldRunScreenshotService(context)
                         },
                         onRemoveOriginal = {
                             OriginalScreenshotCleanup.launchPendingPrompt(context)
@@ -214,16 +247,14 @@ private fun ClipticApp() {
                     )
                     1 -> SettingsTabContent(
                         startOnBoot = startOnBoot,
-                        showServiceNotification = showServiceNotification,
                         xposedActive = xposedActive,
                         copyMode = copyMode,
                         onStartOnBootChange = {
                             startOnBoot = it
                             prefs.edit().putBoolean(ClipticSettings.KEY_START_ON_BOOT, it).apply()
                         },
-                        onShowNotificationChange = {
-                            showServiceNotification = it
-                            prefs.edit().putBoolean(ClipticSettings.KEY_SHOW_SERVICE_NOTIFICATION, it).apply()
+                        onOpenNotificationSettings = {
+                            openServiceNotificationSettings(context)
                         },
                         onCopyModeChange = {
                             copyMode = it
@@ -243,10 +274,9 @@ private fun ClipticApp() {
     }
 
     if (onboardingVisible) {
-        ModalBottomSheet(onDismissRequest = {
-            prefs.edit().putBoolean(ClipticSettings.KEY_ONBOARDING_DONE, true).apply()
-            onboardingVisible = false
-        }) {
+        // Dismissing without granting leaves onboarding incomplete, so it returns next launch
+        // rather than silently leaving the app unable to read screenshots.
+        ModalBottomSheet(onDismissRequest = { onboardingVisible = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -260,14 +290,7 @@ private fun ClipticApp() {
                 Text("Cliptic watches for new screenshots and places them on the clipboard immediately.")
                 Button(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        permissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.READ_MEDIA_IMAGES,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            )
-                        )
-                    }
+                    onClick = { permissionLauncher.launch(permissionRequest) }
                 ) {
                     Text("Grant & Continue")
                 }
@@ -287,6 +310,8 @@ private fun DashboardContent(
     shareSheetEnabled: Boolean,
     removeOriginalAfterCopy: Boolean,
     mediaManagementGranted: Boolean,
+    mediaAccess: MediaAccessLevel,
+    onFixMediaAccess: () -> Unit,
     onPause: () -> Unit,
     onStart: () -> Unit,
     onRemoveOriginal: () -> Unit,
@@ -303,6 +328,9 @@ private fun DashboardContent(
         onStart = onStart,
         onRemoveOriginal = onRemoveOriginal
     )
+    if (mediaAccess != MediaAccessLevel.FULL) {
+        MediaAccessWarning(level = mediaAccess, onFix = onFixMediaAccess)
+    }
     SettingsSection(title = "Behavior") {
         SettingSwitch(
             title = "Auto-copy screenshots",
@@ -333,11 +361,10 @@ private fun DashboardContent(
 @Composable
 private fun SettingsTabContent(
     startOnBoot: Boolean,
-    showServiceNotification: Boolean,
     xposedActive: Boolean,
     copyMode: String,
     onStartOnBootChange: (Boolean) -> Unit,
-    onShowNotificationChange: (Boolean) -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     onCopyModeChange: (String) -> Unit,
     onOpenSourceCode: () -> Unit
 ) {
@@ -350,11 +377,12 @@ private fun SettingsTabContent(
         )
     }
     SettingsSection(title = "Notification") {
-        SettingSwitch(
-            title = "Show service notification",
-            summary = "Manage visibility in Android notification settings.",
-            checked = showServiceNotification,
-            onCheckedChange = onShowNotificationChange
+        ActionRow(
+            title = "Service notification",
+            summary = "Adjust visibility of the ongoing notification in Android settings. " +
+                "It can't be hidden entirely while the service runs.",
+            buttonLabel = "Open",
+            onClick = onOpenNotificationSettings
         )
     }
     if (xposedActive) {
@@ -615,6 +643,93 @@ private fun MediaManagementStatus(
         ) {
             Text(if (granted) "Granted" else "Grant")
         }
+    }
+}
+
+@Composable
+private fun ActionRow(
+    title: String,
+    summary: String,
+    buttonLabel: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.width(16.dp))
+        Button(onClick = onClick, shape = RoundedCornerShape(50)) {
+            Text(buttonLabel)
+        }
+    }
+}
+
+@Composable
+private fun MediaAccessWarning(
+    level: MediaAccessLevel,
+    onFix: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val (message, action) = when (level) {
+        MediaAccessLevel.PARTIAL ->
+            "Limited photo access is on, so Cliptic can't see new screenshots. Allow access to all photos." to "Allow all"
+        else ->
+            "Cliptic needs access to your photos to read screenshots." to "Grant access"
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = colorScheme.errorContainer.copy(alpha = 0.55f),
+        border = BorderStroke(1.dp, colorScheme.error.copy(alpha = 0.35f)),
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (level == MediaAccessLevel.PARTIAL) "Limited photo access" else "Photo access needed",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colorScheme.onErrorContainer
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onErrorContainer
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            Button(onClick = onFix, shape = RoundedCornerShape(50)) {
+                Text(action)
+            }
+        }
+    }
+}
+
+private fun openServiceNotificationSettings(context: android.content.Context) {
+    val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        .putExtra(Settings.EXTRA_CHANNEL_ID, ScreenshotService.CHANNEL_ID)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { context.startActivity(intent) }.onFailure {
+        val fallback = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(fallback) }
     }
 }
 

@@ -91,7 +91,6 @@ Current app settings are stored in app-private `SharedPreferences`:
 | `share_sheet_enabled` | `true` | Enables or disables the Share Sheet activity alias. |
 | `remove_original_after_copy` | `true` | Requests removal of the original gallery screenshot after copying. |
 | `start_on_boot` | `true` | Starts the foreground service after device boot. |
-| `show_service_notification` | `true` | Records the user's notification preference. |
 | `copy_mode` | `auto` | Selects auto, LSPosed, or both when the module is active. |
 | `xposed_secret` | random UUID | Shared secret used for app/Xposed IPC validation. |
 | `cache_duration_ms` | `3600000` | Cache lifetime for copied screenshots. |

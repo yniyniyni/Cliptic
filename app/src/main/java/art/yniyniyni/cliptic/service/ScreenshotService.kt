@@ -31,7 +31,7 @@ class ScreenshotService : Service() {
         super.onCreate()
         ClipticSettings.ensureDefaults(this)
         fileManager = ScreenshotFileManager(this)
-        fileManager.cleanupExpired()
+        fileManager.cleanupExpired(ClipticSettings.cacheDurationMs(this))
         detector = ScreenshotDetector(this) { uri -> copyScreenshotWithRetry(uri) }
         ClipticSettings.prefs(this).edit().putBoolean(ClipticSettings.KEY_SERVICE_RUNNING, true).apply()
     }
@@ -75,7 +75,7 @@ class ScreenshotService : Service() {
         mainHandler.post {
             ClipboardWriter.copyUriToClipboard(this, cachedUri)
             Toast.makeText(this, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
-            fileManager.scheduleCleanup(cachedUri)
+            fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(this))
             if (
                 ClipticSettings.prefs(this)
                     .getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true)
@@ -124,9 +124,9 @@ class ScreenshotService : Service() {
             .build()
     }
 
-    private companion object {
+    companion object {
         const val CHANNEL_ID = "screenshot_service"
-        const val NOTIFICATION_ID = 42
-        const val RETRY_DELAY_MS = 500L
+        private const val NOTIFICATION_ID = 42
+        private const val RETRY_DELAY_MS = 500L
     }
 }

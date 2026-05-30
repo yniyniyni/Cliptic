@@ -22,7 +22,7 @@ class ShareReceiverActivity : Activity() {
             if (cachedUri != null) {
                 ClipboardWriter.copyUriToClipboard(this, cachedUri)
                 Toast.makeText(this, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
-                fileManager.scheduleCleanup(cachedUri)
+                fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(this))
                 if (
                     ClipticSettings.prefs(this)
                         .getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true) &&
