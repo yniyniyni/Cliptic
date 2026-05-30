@@ -5,12 +5,25 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,60 +31,69 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import art.yniyniyni.cliptic.cleanup.OriginalScreenshotCleanup
@@ -81,6 +103,8 @@ import art.yniyniyni.cliptic.permission.MediaAccessLevel
 import art.yniyniyni.cliptic.service.ScreenshotService
 import art.yniyniyni.cliptic.settings.ClipticSettings
 import art.yniyniyni.cliptic.ui.theme.ClipticTheme
+import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,9 +132,10 @@ private fun ClipticApp() {
     var copyMode by remember { mutableStateOf(prefs.getString(ClipticSettings.KEY_COPY_MODE, ClipticSettings.COPY_MODE_AUTO) ?: ClipticSettings.COPY_MODE_AUTO) }
     var pendingOriginalCount by remember { mutableStateOf(OriginalScreenshotCleanup.pendingOriginalCount(context)) }
     var mediaManagementGranted by remember { mutableStateOf(OriginalScreenshotCleanup.canTrashSilently(context)) }
+    var copyCountToday by remember { mutableIntStateOf(ClipticSettings.copyCountToday(context)) }
+    var lastCopyAt by remember { mutableLongStateOf(ClipticSettings.lastCopyAt(context)) }
     val xposedActive = remember { XposedBridge.isModuleActive() }
     var onboardingVisible by remember { mutableStateOf(!prefs.getBoolean(ClipticSettings.KEY_ONBOARDING_DONE, false)) }
-    var selectedTab by remember { mutableIntStateOf(0) }
 
     val permissionRequest = remember { MediaAccess.requestPermissions + Manifest.permission.POST_NOTIFICATIONS }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -132,6 +157,8 @@ private fun ClipticApp() {
         pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
         mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
         mediaAccess = MediaAccess.level(context)
+        copyCountToday = ClipticSettings.copyCountToday(context)
+        lastCopyAt = ClipticSettings.lastCopyAt(context)
     }
 
     DisposableEffect(context) {
@@ -143,6 +170,8 @@ private fun ClipticApp() {
                 mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
                 mediaAccess = MediaAccess.level(context)
                 serviceRunning = prefs.getBoolean(ClipticSettings.KEY_SERVICE_RUNNING, false)
+                copyCountToday = ClipticSettings.copyCountToday(context)
+                lastCopyAt = ClipticSettings.lastCopyAt(context)
             }
         }
         activity?.lifecycle?.addObserver(observer)
@@ -150,112 +179,126 @@ private fun ClipticApp() {
     }
 
     val colorScheme = MaterialTheme.colorScheme
+    val backdrop = Brush.verticalGradient(
+        listOf(colorScheme.primaryContainer.copy(alpha = 0.55f), colorScheme.background)
+    )
+
+    // Settings is an overlay stacked over Home; `settingsOpen` (0 = home, 1 = settings) drives
+    // its slide so the back gesture can scrub it and reveal Home underneath (predictive back).
+    val scope = rememberCoroutineScope()
+    var settingsRendered by remember { mutableStateOf(false) }
+    val settingsOpen = remember { Animatable(0f) }
+    fun openSettings() {
+        settingsRendered = true
+        scope.launch { settingsOpen.animateTo(1f, tween(durationMillis = 340)) }
+    }
+    fun closeSettings() {
+        scope.launch {
+            settingsOpen.animateTo(0f, tween(durationMillis = 280))
+            settingsRendered = false
+        }
+    }
+
+    if (settingsRendered) {
+        PredictiveBackHandler(enabled = true) { progress ->
+            try {
+                progress.collect { event -> settingsOpen.snapTo(1f - event.progress) }
+                // Gesture committed — animate the rest of the way out from where the finger
+                // lifted (don't snap), then drop the overlay.
+                settingsOpen.animateTo(0f, tween(durationMillis = 220))
+                settingsRendered = false
+            } catch (cancellation: CancellationException) {
+                // Gesture cancelled — spring Settings back to fully open.
+                settingsOpen.animateTo(1f, tween(durationMillis = 220))
+                throw cancellation
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        colorScheme.primaryContainer.copy(alpha = 0.55f),
-                        colorScheme.background
-                    )
-                )
-            )
+            .background(backdrop)
     ) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            bottomBar = {
-                ClipticBottomNav(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
-            }
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 20.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_tile_cliptic),
-                        contentDescription = null,
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "Cliptic",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = colorScheme.primary
-                    )
-                }
-
-                when (selectedTab) {
-                    0 -> DashboardContent(
-                        serviceRunning = serviceRunning,
-                        pendingOriginalCount = pendingOriginalCount,
-                        xposedActive = xposedActive,
-                        autoCopyEnabled = autoCopyEnabled,
-                        shareSheetEnabled = shareSheetEnabled,
-                        removeOriginalAfterCopy = removeOriginalAfterCopy,
-                        mediaManagementGranted = mediaManagementGranted,
-                        mediaAccess = mediaAccess,
-                        onFixMediaAccess = {
-                            if (mediaAccess == MediaAccessLevel.PARTIAL) {
-                                MediaAccess.openAppSettings(context)
-                            } else {
-                                permissionLauncher.launch(permissionRequest)
-                            }
-                        },
-                        onPause = {
-                            autoCopyEnabled = false
-                            ClipticSettings.setAutoCopyEnabled(context, false)
-                            serviceRunning = false
-                        },
-                        onStart = {
-                            autoCopyEnabled = true
-                            ClipticSettings.setAutoCopyEnabled(context, true)
-                            serviceRunning = ClipticSettings.shouldRunScreenshotService(context)
-                        },
-                        onRemoveOriginal = {
-                            OriginalScreenshotCleanup.launchPendingPrompt(context)
-                            pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
-                            mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
-                        },
-                        onAutoCopyChange = {
-                            autoCopyEnabled = it
-                            ClipticSettings.setAutoCopyEnabled(context, it)
-                            serviceRunning = it && ClipticSettings.shouldRunScreenshotService(context)
-                        },
-                        onShareSheetChange = {
-                            shareSheetEnabled = it
-                            ClipticSettings.setShareSheetEnabled(context, it)
-                        },
-                        onRemoveOriginalChange = {
-                            removeOriginalAfterCopy = it
-                            prefs.edit().putBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, it).apply()
-                        },
-                        onOpenMediaSettings = {
-                            OriginalScreenshotCleanup.openMediaManagementSettings(context)
+        Scaffold(containerColor = Color.Transparent) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                HomeScreen(
+                    serviceRunning = serviceRunning,
+                    copyCountToday = copyCountToday,
+                    lastCopyAt = lastCopyAt,
+                    retentionMs = ClipticSettings.cacheDurationMs(context),
+                    pendingOriginalCount = pendingOriginalCount,
+                    autoCopyEnabled = autoCopyEnabled,
+                    shareSheetEnabled = shareSheetEnabled,
+                    removeOriginalAfterCopy = removeOriginalAfterCopy,
+                    mediaAccess = mediaAccess,
+                    onOpenSettings = { openSettings() },
+                    onFixMediaAccess = {
+                        if (mediaAccess == MediaAccessLevel.PARTIAL) {
+                            MediaAccess.openAppSettings(context)
+                        } else {
+                            permissionLauncher.launch(permissionRequest)
                         }
-                    )
-                    1 -> SettingsTabContent(
+                    },
+                    onStart = {
+                        autoCopyEnabled = true
+                        ClipticSettings.setAutoCopyEnabled(context, true)
+                        serviceRunning = ClipticSettings.shouldRunScreenshotService(context)
+                    },
+                    onPause = {
+                        autoCopyEnabled = false
+                        ClipticSettings.setAutoCopyEnabled(context, false)
+                        serviceRunning = false
+                    },
+                    onRemoveOriginal = {
+                        OriginalScreenshotCleanup.launchPendingPrompt(context)
+                        pendingOriginalCount = OriginalScreenshotCleanup.pendingOriginalCount(context)
+                        mediaManagementGranted = OriginalScreenshotCleanup.canTrashSilently(context)
+                    },
+                    onAutoCopyChange = {
+                        autoCopyEnabled = it
+                        ClipticSettings.setAutoCopyEnabled(context, it)
+                        serviceRunning = it && ClipticSettings.shouldRunScreenshotService(context)
+                    },
+                    onShareSheetChange = {
+                        shareSheetEnabled = it
+                        ClipticSettings.setShareSheetEnabled(context, it)
+                    },
+                    onRemoveOriginalChange = {
+                        removeOriginalAfterCopy = it
+                        prefs.edit().putBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, it).apply()
+                    }
+                )
+
+                if (settingsRendered) {
+                    SettingsScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                // p: 0 = fully open, 1 = fully dismissed off the right edge.
+                                val p = (1f - settingsOpen.value).coerceIn(0f, 1f)
+                                translationX = size.width * p
+                                scaleX = 1f - 0.04f * p
+                                scaleY = 1f - 0.04f * p
+                                shape = RoundedCornerShape(28.dp.toPx() * p)
+                                clip = true
+                            }
+                            // Opaque base under the translucent gradient so Home doesn't bleed
+                            // through the overlay — it's only revealed by the back-gesture slide.
+                            .background(colorScheme.background)
+                            .background(backdrop),
+                        onBack = { closeSettings() },
                         startOnBoot = startOnBoot,
+                        mediaManagementGranted = mediaManagementGranted,
+                        pendingOriginalCount = pendingOriginalCount,
                         xposedActive = xposedActive,
                         copyMode = copyMode,
                         onStartOnBootChange = {
                             startOnBoot = it
                             prefs.edit().putBoolean(ClipticSettings.KEY_START_ON_BOOT, it).apply()
                         },
-                        onOpenNotificationSettings = {
-                            openServiceNotificationSettings(context)
-                        },
+                        onOpenMediaSettings = { OriginalScreenshotCleanup.openMediaManagementSettings(context) },
+                        onOpenNotificationSettings = { openServiceNotificationSettings(context) },
                         onCopyModeChange = {
                             copyMode = it
                             ClipticSettings.setCopyMode(context, it)
@@ -267,7 +310,6 @@ private fun ClipticApp() {
                             )
                         }
                     )
-                    2 -> HistoryTabContent()
                 }
             }
         }
@@ -277,150 +319,277 @@ private fun ClipticApp() {
         // Dismissing without granting leaves onboarding incomplete, so it returns next launch
         // rather than silently leaving the app unable to read screenshots.
         ModalBottomSheet(onDismissRequest = { onboardingVisible = false }) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            OnboardingContent(onGrant = { permissionLauncher.launch(permissionRequest) })
+        }
+    }
+}
+
+// ── Screens ───────────────────────────────────────────────────────────────────
+
+@Composable
+private fun HomeScreen(
+    serviceRunning: Boolean,
+    copyCountToday: Int,
+    lastCopyAt: Long,
+    retentionMs: Long,
+    pendingOriginalCount: Int,
+    autoCopyEnabled: Boolean,
+    shareSheetEnabled: Boolean,
+    removeOriginalAfterCopy: Boolean,
+    mediaAccess: MediaAccessLevel,
+    onOpenSettings: () -> Unit,
+    onFixMediaAccess: () -> Unit,
+    onStart: () -> Unit,
+    onPause: () -> Unit,
+    onRemoveOriginal: () -> Unit,
+    onAutoCopyChange: (Boolean) -> Unit,
+    onShareSheetChange: (Boolean) -> Unit,
+    onRemoveOriginalChange: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 12.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        HomeTopBar(onOpenSettings = onOpenSettings)
+
+        HeroStatusCard(
+            serviceRunning = serviceRunning,
+            copyCountToday = copyCountToday,
+            lastCopyAt = lastCopyAt,
+            retentionMs = retentionMs,
+            onStart = onStart,
+            onPause = onPause
+        )
+
+        if (mediaAccess != MediaAccessLevel.FULL) {
+            MediaAccessWarning(level = mediaAccess, onFix = onFixMediaAccess)
+        }
+
+        if (pendingOriginalCount > 0) {
+            PendingOriginalsBanner(count = pendingOriginalCount, onRemove = onRemoveOriginal)
+        }
+
+        SectionLabel("Behavior")
+        SettingsCard {
+            SettingRow(
+                icon = Icons.Outlined.ContentCopy,
+                title = "Auto-copy screenshots",
+                summary = "Instantly add new screenshots to your Cliptic board."
+            ) { Switch(checked = autoCopyEnabled, onCheckedChange = onAutoCopyChange) }
+            SettingRow(
+                icon = Icons.Outlined.IosShare,
+                title = "Appear in Share Sheet",
+                summary = "Quickly send links and images from other apps.",
+                divider = true
+            ) { Switch(checked = shareSheetEnabled, onCheckedChange = onShareSheetChange) }
+            SettingRow(
+                icon = Icons.Outlined.CleaningServices,
+                title = "Remove original after copy",
+                summary = "Keep your camera roll clean by deleting the source.",
+                divider = true
+            ) { Switch(checked = removeOriginalAfterCopy, onCheckedChange = onRemoveOriginalChange) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsScreen(
+    onBack: () -> Unit,
+    startOnBoot: Boolean,
+    mediaManagementGranted: Boolean,
+    pendingOriginalCount: Int,
+    xposedActive: Boolean,
+    copyMode: String,
+    onStartOnBootChange: (Boolean) -> Unit,
+    onOpenMediaSettings: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onCopyModeChange: (String) -> Unit,
+    onOpenSourceCode: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 12.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            IconPillButton(Icons.AutoMirrored.Outlined.ArrowBack, "Back", onBack)
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineMedium,
+                color = colorScheme.onBackground
+            )
+        }
+
+        SectionLabel("General")
+        SettingsCard {
+            SettingRow(
+                icon = Icons.Outlined.RestartAlt,
+                title = "Start on boot",
+                summary = "Launch Cliptic automatically when the device starts."
+            ) { Switch(checked = startOnBoot, onCheckedChange = onStartOnBootChange) }
+            SettingRow(
+                icon = Icons.Outlined.AdminPanelSettings,
+                title = "Media management access",
+                summary = when {
+                    mediaManagementGranted -> "Original screenshots can be removed without a prompt."
+                    pendingOriginalCount > 0 -> "Grant access to remove pending originals automatically."
+                    else -> "Without this, Android will ask before removing originals."
+                },
+                divider = true
             ) {
-                Text(
-                    text = "Copy screenshots automatically",
-                    style = MaterialTheme.typography.headlineMedium
+                PillButton(
+                    label = if (mediaManagementGranted) "Granted" else "Grant",
+                    onClick = onOpenMediaSettings,
+                    enabled = !mediaManagementGranted
                 )
-                Text("Cliptic watches for new screenshots and places them on the clipboard immediately.")
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { permissionLauncher.launch(permissionRequest) }
+            }
+        }
+
+        SectionLabel("Notification")
+        SettingsCard {
+            SettingRow(
+                icon = Icons.Outlined.Notifications,
+                title = "Service notification",
+                summary = "Adjust visibility in Android settings. It can't be hidden while the service runs."
+            ) { PillButton(label = "Open", onClick = onOpenNotificationSettings, outlined = true) }
+        }
+
+        if (xposedActive) {
+            SectionLabel("LSPosed")
+            GlassCard {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = colorScheme.primaryContainer.copy(alpha = 0.55f),
+                    border = BorderStroke(1.dp, colorScheme.outlineVariant)
                 ) {
-                    Text("Grant & Continue")
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.primary)
+                        )
+                        Text(
+                            text = "MODULE ACTIVE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colorScheme.primary
+                        )
+                    }
                 }
+                CopyModePicker(copyMode = copyMode, onCopyModeChange = onCopyModeChange)
+            }
+        }
+
+        SectionLabel("About")
+        GlassCard {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.size(38.dp),
+                    shape = RoundedCornerShape(11.dp),
+                    color = colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    shadowElevation = 0.dp,
+                    tonalElevation = 0.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_tile_cliptic),
+                            contentDescription = null,
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Cliptic", style = MaterialTheme.typography.titleSmall, color = colorScheme.onSurface)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Version ${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            OutlinedButton(
+                onClick = onOpenSourceCode,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = colorScheme.surface.copy(alpha = 0.6f)
+                ),
+                border = BorderStroke(1.dp, colorScheme.outlineVariant)
+            ) {
+                Icon(Icons.Outlined.Code, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("View source code")
             }
         }
     }
 }
 
-// ── Tab content ───────────────────────────────────────────────────────────────
+// ── Top bars ──────────────────────────────────────────────────────────────────
 
 @Composable
-private fun DashboardContent(
-    serviceRunning: Boolean,
-    pendingOriginalCount: Int,
-    xposedActive: Boolean,
-    autoCopyEnabled: Boolean,
-    shareSheetEnabled: Boolean,
-    removeOriginalAfterCopy: Boolean,
-    mediaManagementGranted: Boolean,
-    mediaAccess: MediaAccessLevel,
-    onFixMediaAccess: () -> Unit,
-    onPause: () -> Unit,
-    onStart: () -> Unit,
-    onRemoveOriginal: () -> Unit,
-    onAutoCopyChange: (Boolean) -> Unit,
-    onShareSheetChange: (Boolean) -> Unit,
-    onRemoveOriginalChange: (Boolean) -> Unit,
-    onOpenMediaSettings: () -> Unit
-) {
-    HeroStatusCard(
-        serviceRunning = serviceRunning,
-        pendingOriginalCount = pendingOriginalCount,
-        xposedActive = xposedActive,
-        onPause = onPause,
-        onStart = onStart,
-        onRemoveOriginal = onRemoveOriginal
-    )
-    if (mediaAccess != MediaAccessLevel.FULL) {
-        MediaAccessWarning(level = mediaAccess, onFix = onFixMediaAccess)
-    }
-    SettingsSection(title = "Behavior") {
-        SettingSwitch(
-            title = "Auto-copy screenshots",
-            summary = "Instantly add new screenshots to your Cliptic board.",
-            checked = autoCopyEnabled,
-            onCheckedChange = onAutoCopyChange
-        )
-        SettingSwitch(
-            title = "Appear in Share Sheet",
-            summary = "Quickly send links and images from other apps.",
-            checked = shareSheetEnabled,
-            onCheckedChange = onShareSheetChange
-        )
-        SettingSwitch(
-            title = "Remove original after copy",
-            summary = "Keep your camera roll clean by deleting the source file.",
-            checked = removeOriginalAfterCopy,
-            onCheckedChange = onRemoveOriginalChange
-        )
-        MediaManagementStatus(
-            granted = mediaManagementGranted,
-            pendingOriginalCount = pendingOriginalCount,
-            onOpenSettings = onOpenMediaSettings
-        )
-    }
-}
-
-@Composable
-private fun SettingsTabContent(
-    startOnBoot: Boolean,
-    xposedActive: Boolean,
-    copyMode: String,
-    onStartOnBootChange: (Boolean) -> Unit,
-    onOpenNotificationSettings: () -> Unit,
-    onCopyModeChange: (String) -> Unit,
-    onOpenSourceCode: () -> Unit
-) {
-    SettingsSection(title = "General") {
-        SettingSwitch(
-            title = "Start on boot",
-            summary = "Launch Cliptic automatically when the device starts.",
-            checked = startOnBoot,
-            onCheckedChange = onStartOnBootChange
-        )
-    }
-    SettingsSection(title = "Notification") {
-        ActionRow(
-            title = "Service notification",
-            summary = "Adjust visibility of the ongoing notification in Android settings. " +
-                "It can't be hidden entirely while the service runs.",
-            buttonLabel = "Open",
-            onClick = onOpenNotificationSettings
-        )
-    }
-    if (xposedActive) {
-        SettingsSection(title = "LSPosed") {
-            Text(
-                text = "Module active",
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleSmall
+private fun HomeTopBar(onOpenSettings: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Icon(
+                painter = painterResource(R.drawable.ic_tile_cliptic),
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier.size(24.dp)
             )
-            CopyModePicker(copyMode = copyMode, onCopyModeChange = onCopyModeChange)
+            Text(
+                text = "Cliptic",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = colorScheme.primary
+            )
         }
-    }
-    SettingsSection(title = "About") {
-        Text(
-            text = "Version ${BuildConfig.VERSION_NAME}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        TextButton(onClick = onOpenSourceCode) {
-            Text("Source code")
-        }
+        IconPillButton(Icons.Outlined.Settings, "Settings", onOpenSettings)
     }
 }
 
 @Composable
-private fun HistoryTabContent() {
-    GlassCard {
-        Text(
-            text = "History",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "Copy history will appear here in a future update.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun IconPillButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(42.dp),
+        shape = CircleShape,
+        // Soft theme-tinted chip (peach fill + terracotta glyph) rather than a high-contrast dark icon.
+        color = colorScheme.primaryContainer.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(icon, contentDescription = contentDescription, tint = colorScheme.primary, modifier = Modifier.size(22.dp))
+        }
     }
 }
 
@@ -429,118 +598,209 @@ private fun HistoryTabContent() {
 @Composable
 private fun HeroStatusCard(
     serviceRunning: Boolean,
-    pendingOriginalCount: Int,
-    xposedActive: Boolean,
-    onPause: () -> Unit,
+    copyCountToday: Int,
+    lastCopyAt: Long,
+    retentionMs: Long,
     onStart: () -> Unit,
-    onRemoveOriginal: () -> Unit
+    onPause: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = colorScheme.surfaceVariant.copy(alpha = 0.85f),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(if (serviceRunning) colorScheme.primary else colorScheme.outline)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        colorScheme.surface.copy(alpha = 0.28f)
                     )
-                    Text(
-                        text = if (serviceRunning) "SERVICE ACTIVE" else "SERVICE INACTIVE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Surface(
-                modifier = Modifier.size(44.dp),
-                shape = RoundedCornerShape(14.dp),
-                color = colorScheme.surface.copy(alpha = 0.30f),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                shadowElevation = 0.dp,
-                tonalElevation = 0.dp
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = Icons.Outlined.Bolt,
-                        contentDescription = null,
-                        tint = colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-        }
-
-        Text(
-            text = if (serviceRunning) "Automagic Sync" else "Automagic Off",
-            style = MaterialTheme.typography.displayLarge,
-            color = colorScheme.onBackground,
-            maxLines = 1,
-            softWrap = false
-        )
-
-        if (serviceRunning) {
-            OutlinedButton(
-                onClick = onPause,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = colorScheme.surface.copy(alpha = 0.6f)
-                ),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant)
-            ) {
-                Icon(Icons.Outlined.Pause, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Pause Monitoring")
-            }
-        } else {
-            Button(
-                onClick = onStart,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(50)
-            ) {
-                Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Start Monitoring")
-            }
-        }
-
-        if (xposedActive) {
-            Text(
-                text = "LSPosed active",
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.primary
+                )
             )
-        }
-
-        if (pendingOriginalCount > 0) {
-            FilledTonalButton(
-                onClick = onRemoveOriginal,
+            .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f), RoundedCornerShape(24.dp))
+            .padding(20.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(50)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                    border = BorderStroke(1.dp, colorScheme.outlineVariant)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (serviceRunning) colorScheme.primary else colorScheme.outline)
+                        )
+                        Text(
+                            text = if (serviceRunning) "SERVICE ACTIVE" else "SERVICE INACTIVE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.size(46.dp),
+                    shape = RoundedCornerShape(15.dp),
+                    color = colorScheme.primaryContainer.copy(alpha = 0.7f),
+                    border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    shadowElevation = 0.dp,
+                    tonalElevation = 0.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = Icons.Outlined.Bolt,
+                            contentDescription = null,
+                            tint = colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    if (pendingOriginalCount == 1) "Remove original"
-                    else "Remove originals ($pendingOriginalCount)"
+                    text = if (serviceRunning) "Automagic Sync" else "Automagic Off",
+                    style = MaterialTheme.typography.displayLarge.copy(fontSize = 34.sp, lineHeight = 40.sp),
+                    color = colorScheme.onBackground,
+                    maxLines = 1,
+                    softWrap = false
+                )
+                Text(
+                    text = if (serviceRunning) "Watching for new screenshots." else "Screenshots aren't being copied right now.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant
                 )
             }
+
+            // Action area as a single child so the gap above it stays 16dp in both states.
+            // The stats expand/collapse animates the hero's height (the "box expansion").
+            Column {
+                AnimatedVisibility(
+                    visible = serviceRunning,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            StatChip(value = copyCountToday.toString(), label = "Copied today")
+                            StatChip(value = formatRelativeTime(lastCopyAt), label = "Last copy")
+                            StatChip(value = formatRetention(retentionMs), label = "On clipboard")
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
+
+                Crossfade(targetState = serviceRunning, label = "heroAction") { running ->
+                    if (running) {
+                        OutlinedButton(
+                            onClick = onPause,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = colorScheme.surface.copy(alpha = 0.6f)
+                            ),
+                            border = BorderStroke(1.dp, colorScheme.outlineVariant)
+                        ) {
+                            Icon(Icons.Outlined.Pause, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Pause Monitoring")
+                        }
+                    } else {
+                        Button(
+                            onClick = onStart,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(50)
+                        ) {
+                            Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Start Monitoring")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.StatChip(value: String, label: String) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.weight(1f),
+        shape = RoundedCornerShape(14.dp),
+        color = colorScheme.surface.copy(alpha = 0.5f),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp)) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                color = colorScheme.onBackground,
+                maxLines = 1,
+                softWrap = false
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+            )
+        }
+    }
+}
+
+// ── Pending originals banner ───────────────────────────────────────────────────
+
+@Composable
+private fun PendingOriginalsBanner(count: Int, onRemove: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = colorScheme.surface.copy(alpha = 0.30f),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp)
+        ) {
+            IconTile(Icons.Outlined.DeleteSweep)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (count == 1) "1 original waiting" else "$count originals waiting",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colorScheme.onSurface
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Tap to remove the source screenshots.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant
+                )
+            }
+            PillButton(label = "Remove", onClick = onRemove)
         }
     }
 }
@@ -570,105 +830,97 @@ private fun GlassCard(
     }
 }
 
+/** A glass card sized for stacked [SettingRow]s — rows own their vertical padding + dividers. */
 @Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary
-        )
-        GlassCard(content = content)
-    }
-}
-
-@Composable
-private fun SettingSwitch(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    summary: String? = null
-) {
-    Row(
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.30f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            if (summary != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        Spacer(Modifier.width(16.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Column(modifier = Modifier.padding(horizontal = 18.dp), content = content)
     }
 }
 
 @Composable
-private fun MediaManagementStatus(
-    granted: Boolean,
-    pendingOriginalCount: Int,
-    onOpenSettings: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text("Media management access", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = when {
-                    granted -> "Original screenshots can be removed without a prompt."
-                    pendingOriginalCount > 0 -> "Grant access to remove pending originals automatically."
-                    else -> "Without this, Android will ask before removing originals."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(Modifier.width(16.dp))
-        Button(
-            enabled = !granted,
-            onClick = onOpenSettings,
-            shape = RoundedCornerShape(50)
-        ) {
-            Text(if (granted) "Granted" else "Grant")
-        }
-    }
+private fun SectionLabel(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 2.dp)
+    )
 }
 
 @Composable
-private fun ActionRow(
+private fun SettingRow(
+    icon: ImageVector,
     title: String,
     summary: String,
-    buttonLabel: String,
-    onClick: () -> Unit
+    divider: Boolean = false,
+    trailing: @Composable () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    if (divider) {
+        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.3f))
+    }
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        IconTile(icon)
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(title, style = MaterialTheme.typography.titleSmall, color = colorScheme.onSurface)
+            Spacer(Modifier.height(3.dp))
+            Text(summary, style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurfaceVariant)
         }
-        Spacer(Modifier.width(16.dp))
-        Button(onClick = onClick, shape = RoundedCornerShape(50)) {
-            Text(buttonLabel)
+        trailing()
+    }
+}
+
+@Composable
+private fun IconTile(icon: ImageVector) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.size(38.dp),
+        shape = RoundedCornerShape(11.dp),
+        color = colorScheme.primaryContainer.copy(alpha = 0.5f),
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(icon, contentDescription = null, tint = colorScheme.primary, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+@Composable
+private fun PillButton(
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    outlined: Boolean = false
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    if (outlined) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            shape = RoundedCornerShape(50),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = colorScheme.surface.copy(alpha = 0.6f)
+            ),
+            border = BorderStroke(1.dp, colorScheme.outlineVariant)
+        ) { Text(label) }
+    } else {
+        Button(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(50)) {
+            Text(label)
         }
     }
 }
@@ -681,7 +933,7 @@ private fun MediaAccessWarning(
     val colorScheme = MaterialTheme.colorScheme
     val (message, action) = when (level) {
         MediaAccessLevel.PARTIAL ->
-            "Limited photo access is on, so Cliptic can't see new screenshots. Allow access to all photos." to "Allow all"
+            "Limited access is on, so Cliptic can't see new screenshots. Allow access to all photos." to "Allow all"
         else ->
             "Cliptic needs access to your photos to read screenshots." to "Grant access"
     }
@@ -696,9 +948,16 @@ private fun MediaAccessWarning(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            Icon(
+                imageVector = Icons.Outlined.PhotoLibrary,
+                contentDescription = null,
+                tint = colorScheme.onErrorContainer,
+                modifier = Modifier.size(22.dp)
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (level == MediaAccessLevel.PARTIAL) "Limited photo access" else "Photo access needed",
@@ -712,10 +971,85 @@ private fun MediaAccessWarning(
                     color = colorScheme.onErrorContainer
                 )
             }
-            Spacer(Modifier.width(16.dp))
             Button(onClick = onFix, shape = RoundedCornerShape(50)) {
                 Text(action)
             }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingContent(onGrant: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(64.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = colorScheme.primaryContainer,
+            shadowElevation = 0.dp,
+            tonalElevation = 0.dp
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_tile_cliptic),
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "Copy screenshots, automagically",
+                style = MaterialTheme.typography.headlineMedium,
+                color = colorScheme.onSurface
+            )
+            Text(
+                text = "Cliptic watches for new screenshots and drops them straight onto the clipboard — paste anywhere, no gallery.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurfaceVariant
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            OnboardingPermission(
+                icon = Icons.Outlined.PhotoLibrary,
+                title = "Access your photos",
+                summary = "To read new screenshots as they're taken."
+            )
+            OnboardingPermission(
+                icon = Icons.Outlined.Notifications,
+                title = "Show a notification",
+                summary = "Required to keep watching in the background."
+            )
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onGrant,
+            shape = RoundedCornerShape(50)
+        ) {
+            Text("Grant & Continue")
+        }
+    }
+}
+
+@Composable
+private fun OnboardingPermission(icon: ImageVector, title: String, summary: String) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        IconTile(icon)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = colorScheme.onSurface)
+            Text(summary, style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -733,57 +1067,93 @@ private fun openServiceNotificationSettings(context: android.content.Context) {
     }
 }
 
-@Composable
-private fun ClipticBottomNav(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit
-) {
-    data class NavItem(val label: String, val icon: ImageVector)
-    val items = listOf(
-        NavItem("Dashboard", Icons.Outlined.GridView),
-        NavItem("Settings", Icons.Outlined.Settings),
-        NavItem("History", Icons.Outlined.History),
-    )
-    NavigationBar(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)) {
-        items.forEachIndexed { index, item ->
-            NavigationBarItem(
-                selected = selectedTab == index,
-                onClick = { onTabSelected(index) },
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) }
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CopyModePicker(
     copyMode: String,
     onCopyModeChange: (String) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HorizontalDivider()
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CopyModeOption("Auto only", ClipticSettings.COPY_MODE_AUTO, copyMode, onCopyModeChange)
-            CopyModeOption("LSPosed only", ClipticSettings.COPY_MODE_XPOSED, copyMode, onCopyModeChange)
-            CopyModeOption("Both", ClipticSettings.COPY_MODE_BOTH, copyMode, onCopyModeChange)
+            CopyModeChip("Auto only", ClipticSettings.COPY_MODE_AUTO, copyMode, onCopyModeChange)
+            CopyModeChip("LSPosed only", ClipticSettings.COPY_MODE_XPOSED, copyMode, onCopyModeChange)
+            CopyModeChip("Both", ClipticSettings.COPY_MODE_BOTH, copyMode, onCopyModeChange)
         }
     }
 }
 
+/** A selectable pill chip with a radio dot — tints + cross-fades its colors when chosen. */
 @Composable
-private fun CopyModeOption(
+private fun CopyModeChip(
     label: String,
     value: String,
     selected: String,
     onCopyModeChange: (String) -> Unit
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        RadioButton(selected = selected == value, onClick = { onCopyModeChange(value) })
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+    val colorScheme = MaterialTheme.colorScheme
+    val isSelected = selected == value
+    val background by animateColorAsState(
+        if (isSelected) colorScheme.primaryContainer.copy(alpha = 0.7f) else colorScheme.surface.copy(alpha = 0.4f),
+        label = "chipBackground"
+    )
+    val borderColor by animateColorAsState(
+        if (isSelected) colorScheme.primary.copy(alpha = 0.55f) else colorScheme.outlineVariant.copy(alpha = 0.45f),
+        label = "chipBorder"
+    )
+    val contentColor by animateColorAsState(
+        if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant,
+        label = "chipContent"
+    )
+    Surface(
+        onClick = { onCopyModeChange(value) },
+        shape = RoundedCornerShape(50),
+        color = background,
+        border = BorderStroke(1.dp, borderColor),
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 10.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val dotScale by animateFloatAsState(if (isSelected) 1f else 0f, label = "chipDot")
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, if (isSelected) colorScheme.primary else colorScheme.outline, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .scale(dotScale)
+                        .clip(CircleShape)
+                        .background(colorScheme.primary)
+                )
+            }
+            Text(label, style = MaterialTheme.typography.titleSmall, color = contentColor)
+        }
     }
+}
+
+private fun formatRelativeTime(epochMillis: Long): String {
+    if (epochMillis <= 0L) return "—"
+    val diff = System.currentTimeMillis() - epochMillis
+    return when {
+        diff < 60_000L -> "Just now"
+        diff < 3_600_000L -> "${diff / 60_000L}m ago"
+        diff < 86_400_000L -> "${diff / 3_600_000L}h ago"
+        else -> "${diff / 86_400_000L}d ago"
+    }
+}
+
+private fun formatRetention(ms: Long): String {
+    val minutes = ms / 60_000L
+    return if (minutes >= 60L) "${minutes / 60L}h" else "${minutes}m"
 }

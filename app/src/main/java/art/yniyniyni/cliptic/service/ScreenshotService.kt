@@ -74,6 +74,7 @@ class ScreenshotService : Service() {
     private fun copyCachedScreenshot(cachedUri: Uri, originalUri: Uri) {
         mainHandler.post {
             ClipboardWriter.copyUriToClipboard(this, cachedUri)
+            ClipticSettings.recordCopy(this)
             Toast.makeText(this, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
             fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(this))
             if (

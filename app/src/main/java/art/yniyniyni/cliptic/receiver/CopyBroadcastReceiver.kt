@@ -28,6 +28,7 @@ class CopyBroadcastReceiver : BroadcastReceiver() {
                 if (cachedUri != null) {
                     Handler(Looper.getMainLooper()).post {
                         ClipboardWriter.copyUriToClipboard(context, cachedUri)
+                        ClipticSettings.recordCopy(context)
                         Toast.makeText(context, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
                         fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(context))
                         sendCopyAck(context, sourceUri, secret)

@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import art.yniyniyni.cliptic.service.ScreenshotService
+import java.time.LocalDate
 import java.util.UUID
 
 object ClipticSettings {
@@ -22,6 +23,9 @@ object ClipticSettings {
     const val KEY_PENDING_ORIGINAL_REQUEST_ID = "pending_original_request_id"
     const val KEY_PENDING_ORIGINAL_QUEUE = "pending_original_queue"
     const val KEY_SERVICE_RUNNING = "service_running"
+    const val KEY_COPY_COUNT_DAY = "copy_count_day"
+    const val KEY_COPY_COUNT_DAY_EPOCH = "copy_count_day_epoch"
+    const val KEY_LAST_COPY_AT = "last_copy_at"
 
     const val COPY_MODE_AUTO = "auto"
     const val COPY_MODE_XPOSED = "xposed"
@@ -59,6 +63,32 @@ object ClipticSettings {
     fun cacheDurationMs(context: Context): Long {
         return prefs(context).getLong(KEY_CACHE_DURATION_MS, DEFAULT_CACHE_DURATION_MS)
     }
+
+    /** Records a successful copy: bumps today's counter (resetting on day change) and the last-copy time. */
+    fun recordCopy(context: Context) {
+        val prefs = prefs(context)
+        val today = LocalDate.now().toEpochDay()
+        val storedDay = prefs.getLong(KEY_COPY_COUNT_DAY_EPOCH, today)
+        val countSoFar = if (storedDay == today) prefs.getInt(KEY_COPY_COUNT_DAY, 0) else 0
+        prefs.edit()
+            .putLong(KEY_COPY_COUNT_DAY_EPOCH, today)
+            .putInt(KEY_COPY_COUNT_DAY, countSoFar + 1)
+            .putLong(KEY_LAST_COPY_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    /** Copies made today; resets implicitly when the stored day is no longer today. */
+    fun copyCountToday(context: Context): Int {
+        val prefs = prefs(context)
+        return if (prefs.getLong(KEY_COPY_COUNT_DAY_EPOCH, -1L) == LocalDate.now().toEpochDay()) {
+            prefs.getInt(KEY_COPY_COUNT_DAY, 0)
+        } else {
+            0
+        }
+    }
+
+    /** Epoch-millis of the last successful copy, or 0 if none recorded. */
+    fun lastCopyAt(context: Context): Long = prefs(context).getLong(KEY_LAST_COPY_AT, 0L)
 
     fun shouldRunScreenshotService(context: Context): Boolean {
         val prefs = prefs(context)

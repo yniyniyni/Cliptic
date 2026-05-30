@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Cliptic launcher background — the warm "peach to cream" brand backdrop
-  (primaryContainer over background), matching the in-app gradient. The static
-  warm tone is the default look; dynamic Material You theming is delivered by
-  the <monochrome> themed-icon layer (see ic_launcher_monochrome.xml).
+  Cliptic launcher background — the soft "container → surface" brand backdrop,
+  matching the in-app gradient. Uses the Android 12+ Material You system palette
+  (@android:color/system_accent1_100 → system_neutral1_50) so it re-tints to the
+  wallpaper's dynamic colors by default. The <monochrome> layer (see
+  ic_launcher_monochrome.xml) additionally drives the "Themed icons" toggle.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
@@ -19,9 +20,9 @@
                 android:startY="0"
                 android:endX="54"
                 android:endY="108">
-                <item android:offset="0.0" android:color="#F8D4BA" />
-                <item android:offset="0.5" android:color="#FAE0CE" />
-                <item android:offset="1.0" android:color="#FEF3ED" />
+                <item android:offset="0.0" android:color="@android:color/system_accent1_100" />
+                <item android:offset="0.55" android:color="@android:color/system_accent1_50" />
+                <item android:offset="1.0" android:color="@android:color/system_neutral1_50" />
             </gradient>
         </aapt:attr>
     </path>
