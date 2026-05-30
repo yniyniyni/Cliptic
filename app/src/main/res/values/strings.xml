@@ -25,7 +25,7 @@
     <!-- Home: section + behavior settings -->
     <string name="home_section_behavior">Behavior</string>
     <string name="setting_auto_copy_title">Auto-copy screenshots</string>
-    <string name="setting_auto_copy_summary">Instantly add new screenshots to your Cliptic board.</string>
+    <string name="setting_auto_copy_summary">Instantly add new screenshots to your Clip(tic)board.</string>
     <string name="setting_share_sheet_title">Appear in Share Sheet</string>
     <string name="setting_share_sheet_summary">Quickly send links and images from other apps.</string>
     <string name="setting_remove_original_title">Remove original after copy</string>

@@ -25,7 +25,7 @@
     <!-- Home: section + behavior settings -->
     <string name="home_section_behavior">Поведение</string>
     <string name="setting_auto_copy_title">Автокопирование скриншотов</string>
-    <string name="setting_auto_copy_summary">Мгновенно добавляйте новые скриншоты в буфер Cliptic.</string>
+    <string name="setting_auto_copy_summary">Мгновенно добавляйте новые скриншоты в буфер обмена.</string>
     <string name="setting_share_sheet_title">Показывать в меню «Поделиться»</string>
     <string name="setting_share_sheet_summary">Быстро отправляйте ссылки и изображения из других приложений.</string>
     <string name="setting_remove_original_title">Удалять оригинал после копирования</string>
