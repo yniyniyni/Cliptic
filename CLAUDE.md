@@ -16,7 +16,7 @@ JDK 17, Android SDK 36, `minSdk = 34`. All commands use the Gradle wrapper.
 ./gradlew :xposed:assembleDebug      # LSPosed module only
 ./gradlew :app:installDebug          # install standalone app
 ./gradlew test                       # all local unit tests
-./gradlew :app:testDebugUnitTest --tests "art.yniyniyni.cliptic.ExampleUnitTest"   # single test class
+./gradlew :app:testDebugUnitTest --tests "art.yniyniyni.cliptic.ExampleUnitTest"
 ```
 
 Use `rg` for searching the tree.
@@ -27,15 +27,37 @@ Three Gradle modules, all under package root `art.yniyniyni.cliptic`:
 
 - **`:core`** — pure Android library, no Compose. Owns the reusable primitives: `ClipboardWriter` (writes a `content://` URI onto the clipboard), `ScreenshotDetector` (MediaStore `ContentObserver`), `ScreenshotFileManager` (cache + expiry), `util/XposedBridge` (active-module stub).
 - **`:app`** — the primary, fully-usable standalone APK (`art.yniyniyni.cliptic`). Compose/Material 3 UI, foreground service, receivers, QS tile, IPC provider, cleanup flow. Depends on `:core`.
-- **`:xposed`** — separate LSPosed module APK (`art.yniyniyni.cliptic.xposed`). Depends on `:core`. Working on Android 16 Pixel SystemUI. `CopyButtonInjector` (in the `com.android.systemui:screenshot` process) hooks the shelf view binders + `Uri`-bearing methods, injects a "Copy" chip into `LinearLayout id=screenshot_actions`, and on tap broadcasts `ACTION_COPY_SCREENSHOT` (Uri + secret) to the app. `SystemUIHook` also hooks `Application.attach` to capture the SystemUI `Context` and registers `CopyAckReceiver`. `AppHook` (app process) hooks `XposedBridge.isModuleActive` → `true` so the UI shows "LSPosed active". `SystemUiInspector` is the retained (no longer invoked) discovery harness for re-mapping SystemUI internals if a build changes them — see `xposed/SYSTEMUI_ANDROID16_FINDINGS.md` for the confirmed class/view map.
+- **`:xposed`** — separate LSPosed module APK (`art.yniyniyni.cliptic.xposed`). Depends on `:core`. Targets Android 16 Pixel SystemUI. Contains four active hooks (see below) plus the retained `SystemUiInspector` discovery harness.
 
-## Standalone copy flow (the working path)
+## Standalone copy flow
 
-`ScreenshotService` (`:app`, foreground `specialUse` service) creates a `ScreenshotDetector` (`:core`) → detector observes `MediaStore.Images.Media.EXTERNAL_CONTENT_URI`, filters recent images whose `RELATIVE_PATH` contains `Screenshots`, dedupes, and waits ~500ms for the file to finish writing → `ScreenshotService.copyScreenshotWithRetry` caches the image via `ScreenshotFileManager` into `cacheDir`, exposed through `FileProvider`, and puts that cached URI on the clipboard via `ClipboardWriter`. Cached files expire after `cache_duration_ms` (default 1h). The Share Sheet path runs the same cache→copy through `ShareReceiverActivity`.
+`ScreenshotService` (`:app`, foreground `specialUse` service) creates a `ScreenshotDetector` (`:core`) → detector observes `MediaStore.Images.Media.EXTERNAL_CONTENT_URI`, filters recent images whose `RELATIVE_PATH` contains `Screenshots`, dedupes, and waits ~500 ms for the file to finish writing → `ScreenshotService.copyScreenshotWithRetry` caches the image via `ScreenshotFileManager` into `cacheDir`, exposed through `FileProvider`, and puts that cached URI on the clipboard via `ClipboardWriter`. Cached files expire after `cache_duration_ms` (default 1h). The Share Sheet path runs the same cache→copy through `ShareReceiverActivity`.
 
 ## Original-screenshot cleanup
 
 `OriginalScreenshotCleanup` (invoked when `remove_original_after_copy` is on) uses `MediaStore.createTrashRequest`. If `MediaStore.canManageMedia` is true it trashes silently with a fast retry ladder (`scheduleFastTrashRetries`) plus a WorkManager job (`PendingOriginalTrashWorker`) for durability; otherwise it queues the URI and posts a confirmation notification (`RemoveOriginalActivity` prompt). Pending originals are persisted as a newline-joined queue in `KEY_PENDING_ORIGINAL_QUEUE` (with migration from the legacy single-URI key).
+
+## Xposed hooks
+
+### CopyButtonInjector (screenshot shelf)
+
+Injects a "Copy" chip into the Android 16 Pixel SystemUI screenshot shelf toolbar. Uses **model injection**: a `before` hook on `ScreenshotShelfViewBinder.access$updateActions` prepends a `ActionButtonViewModel` (with a `CopyIconDrawable`) to the action list so the framework renders, styles, and recycles the chip exactly like Share/Edit. The screenshot URI is captured separately via `after` hooks on Uri-bearing methods in `ImageExporter`, `ActionIntentCreator`, and `ScreenshotController`. On tap, broadcasts `ACTION_COPY_SCREENSHOT` (Uri + secret) to the Cliptic app.
+
+### MarkupCopyInjector (Markup / screenshot editor)
+
+Adds a "Copy" button to the Pixel Markup editor (`com.google.android.markup` → `AnnotateActivity`). Hooks `AnnotateActivity.onCreate` to inject the button and invokes the editor's built-in clipboard-export path (mode 2 of `AnnotateActivity.I(int)`), suppressing the trailing `finishAndRemoveTask()` so the editor stays open after a copy.
+
+### SystemUIHook
+
+Hooks `Application.attach` in the `com.android.systemui` process to capture the SystemUI `Context` and register `CopyAckReceiver`.
+
+### AppHook
+
+Hooks `XposedBridge.isModuleActive` → `true` in the app process so the UI shows "LSPosed active" and exposes the copy-mode picker.
+
+### SystemUiInspector (retained, not invoked in production)
+
+Discovery harness for re-mapping SystemUI internals if a build changes them. See `xposed/SYSTEMUI_ANDROID16_FINDINGS.md` for the confirmed class/view map.
 
 ## App ↔ Xposed IPC bridge (security-critical)
 
@@ -54,7 +76,8 @@ All settings are app-private `SharedPreferences`, centralized in `ClipticSetting
 
 - `setShareSheetEnabled` toggles the `ShareReceiverAlias` `activity-alias` via `setComponentEnabledSetting` — that is how Cliptic adds/removes itself from the Share Sheet. Editing the pref alone is not enough.
 - `setAutoCopyEnabled` / `setCopyMode` start or stop `ScreenshotService`. `copy_mode` (`auto`/`xposed`/`both`) gates whether the service runs: `shouldRunScreenshotService` returns false when mode is `xposed`-only.
+- `recordCopy` tracks the daily copy count and last-copy timestamp shown in the hero status card.
 
 ## Scope constraints
 
-Intentionally small. Do not add screenshot history, gallery browsing, editing, cloud sync, widgets, or Wear/TV support. The first Xposed target is Android 16 Pixel SystemUI only — do not generalize it.
+Intentionally small. Do not add screenshot history, gallery browsing, editing, cloud sync, widgets, or Wear/TV support. The Xposed target is Android 16 Pixel SystemUI only — do not generalize it.
