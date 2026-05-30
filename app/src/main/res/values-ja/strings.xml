@@ -1,0 +1,104 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+
+    <!-- Service / notifications -->
+    <string name="screenshot_copied">スクリーンショットをコピーしました</string>
+    <string name="service_channel_name">スクリーンショット監視</string>
+    <string name="service_notification_title">Cliptic がスクリーンショットを監視中</string>
+    <string name="service_notification_text">新しいスクリーンショットは自動的にコピーされます。</string>
+    <string name="service_stop">停止</string>
+    <string name="trash_channel_name">スクリーンショットの整理</string>
+    <string name="trash_notification_title">元のスクリーンショットを削除</string>
+    <string name="trash_notification_text">ギャラリーからの削除を確認してください。</string>
+    <string name="trash_notification_text_pending">ギャラリーからの削除を確認してください。保留中: %1$d</string>
+    <string name="trash_notification_action">元を削除</string>
+
+    <!-- Generic actions -->
+    <string name="action_back">戻る</string>
+    <string name="action_settings">設定</string>
+    <string name="action_open">開く</string>
+    <string name="action_grant">許可</string>
+    <string name="action_granted">許可済み</string>
+    <string name="action_remove">削除</string>
+    <string name="action_view_source">ソースコードを表示</string>
+
+    <!-- Home: section + behavior settings -->
+    <string name="home_section_behavior">動作</string>
+    <string name="setting_auto_copy_title">スクリーンショットを自動コピー</string>
+    <string name="setting_auto_copy_summary">新しいスクリーンショットをすぐに Cliptic ボードに追加します。</string>
+    <string name="setting_share_sheet_title">共有メニューに表示</string>
+    <string name="setting_share_sheet_summary">他のアプリからリンクや画像をすばやく送信します。</string>
+    <string name="setting_remove_original_title">コピー後に元を削除</string>
+    <string name="setting_remove_original_summary">元を削除してギャラリーをすっきり保ちます。</string>
+
+    <!-- Hero status card -->
+    <string name="hero_service_active">サービス稼働中</string>
+    <string name="hero_service_inactive">サービス停止中</string>
+    <string name="hero_title_on">オートマジック同期</string>
+    <string name="hero_title_off">オートマジック オフ</string>
+    <string name="hero_subtitle_on">新しいスクリーンショットを監視中。</string>
+    <string name="hero_subtitle_off">現在スクリーンショットはコピーされていません。</string>
+    <string name="stat_copied_today">今日のコピー</string>
+    <string name="stat_last_copy">最後のコピー</string>
+    <string name="stat_on_clipboard">クリップボード</string>
+    <string name="action_start_monitoring">監視を開始</string>
+    <string name="action_pause_monitoring">一時停止</string>
+
+    <!-- Relative time / retention -->
+    <string name="time_none">—</string>
+    <string name="time_just_now">たった今</string>
+    <string name="time_minutes_ago">%1$d 分前</string>
+    <string name="time_hours_ago">%1$d 時間前</string>
+    <string name="time_days_ago">%1$d 日前</string>
+    <string name="retention_minutes">%1$d 分</string>
+    <string name="retention_hours">%1$d 時間</string>
+
+    <!-- Pending originals banner -->
+    <plurals name="pending_originals_waiting">
+        <item quantity="other">%1$d 件の元画像が保留中</item>
+    </plurals>
+    <string name="pending_originals_summary">タップして元のスクリーンショットを削除します。</string>
+
+    <!-- Media access warning -->
+    <string name="media_warning_partial_title">写真へのアクセスが制限されています</string>
+    <string name="media_warning_partial_message">制限付きアクセスが有効なため、Cliptic は新しいスクリーンショットを認識できません。すべての写真へのアクセスを許可してください。</string>
+    <string name="media_warning_partial_action">すべて許可</string>
+    <string name="media_warning_none_title">写真へのアクセスが必要</string>
+    <string name="media_warning_none_message">スクリーンショットを読み取るには、Cliptic に写真へのアクセスが必要です。</string>
+    <string name="media_warning_none_action">アクセスを許可</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">スクリーンショットをオートマジックにコピー</string>
+    <string name="onboarding_subtitle">Cliptic は新しいスクリーンショットを監視し、そのままクリップボードに送ります。ギャラリーを開かず、どこにでも貼り付け。</string>
+    <string name="onboarding_perm_photos_title">写真へのアクセス</string>
+    <string name="onboarding_perm_photos_summary">撮影直後の新しいスクリーンショットを読み取るため。</string>
+    <string name="onboarding_perm_notification_title">通知を表示</string>
+    <string name="onboarding_perm_notification_summary">バックグラウンドで監視を続けるために必要です。</string>
+    <string name="onboarding_grant">許可して続行</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">設定</string>
+    <string name="settings_section_general">一般</string>
+    <string name="setting_start_on_boot_title">起動時に開始</string>
+    <string name="setting_start_on_boot_summary">デバイスの起動時に Cliptic を自動的に開始します。</string>
+    <string name="setting_media_management_title">メディア管理アクセス</string>
+    <string name="setting_media_management_summary_granted">元のスクリーンショットを確認なしで削除できます。</string>
+    <string name="setting_media_management_summary_pending">保留中の元画像を自動的に削除するにはアクセスを許可してください。</string>
+    <string name="setting_media_management_summary_default">これがないと、Android は元画像を削除する前に確認します。</string>
+    <string name="settings_section_notification">通知</string>
+    <string name="setting_service_notification_title">サービス通知</string>
+    <string name="setting_service_notification_summary">Android の設定で表示を調整できます。サービスの稼働中は非表示にできません。</string>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">モジュール有効</string>
+    <string name="copy_mode_auto">自動のみ</string>
+    <string name="copy_mode_xposed">LSPosed のみ</string>
+    <string name="copy_mode_both">両方</string>
+    <string name="settings_section_about">情報</string>
+    <string name="about_version">バージョン %1$s</string>
+
+    <!-- Language picker -->
+    <string name="settings_section_language">言語</string>
+    <string name="language_picker_title">アプリの言語</string>
+    <string name="setting_app_language_summary">Cliptic が使用する言語を選択します。</string>
+    <string name="language_system_default">システムのデフォルト</string>
+</resources>

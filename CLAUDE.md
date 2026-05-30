@@ -78,6 +78,16 @@ All settings are app-private `SharedPreferences`, centralized in `ClipticSetting
 - `setAutoCopyEnabled` / `setCopyMode` start or stop `ScreenshotService`. `copy_mode` (`auto`/`xposed`/`both`) gates whether the service runs: `shouldRunScreenshotService` returns false when mode is `xposed`-only.
 - `recordCopy` tracks the daily copy count and last-copy timestamp shown in the hero status card.
 
+## Localization
+
+All user-facing `:app` strings live in `app/src/main/res/values/strings.xml` (the default, `en-US`). Code never hardcodes display text — Compose uses `stringResource`/`pluralStringResource`, non-Compose code uses `context.getString`. Counts go through `<plurals>` (e.g. `pending_originals_waiting`); anything with a number uses a positional format arg (`%1$d`, `%1$s`).
+
+Per-app language support is **auto-generated**: `androidResources { generateLocaleConfig = true }` in `app/build.gradle.kts` builds `locale_config.xml` from the present `values-*` folders and injects `android:localeConfig` into the merged manifest, so Cliptic shows up in Settings → System → Languages → App languages. The default locale is declared in `app/src/main/res/resources.properties` (`unqualifiedResLocale=en-US`) — note that AGP reads this file from the **res source set**, not the module root, despite what the docs imply.
+
+An in-app language picker lives in Settings (the "Language" section). `AppLanguages` (`settings/AppLanguages.kt`) wraps the platform `LocaleManager` (API 33+): `set()` applies a BCP-47 tag — or the empty list for system default — which persists the per-app locale and recreates the activity in the new language. The picker list and autonyms (each language shown in its own script, not translated) must stay in sync with the shipped `values-*` folders.
+
+Ten locales ship: `en-US` (default) plus `ar`, `de`, `es`, `fr`, `hi`, `ja`, `pt-rBR`, `ru`, `zh-rCN`. Each carries the full key set with locale-correct `<plurals>` (Arabic has all six categories; es/fr/pt include `many` for lint). To add a language: create `values-<lang>/strings.xml` with the same keys, or use Android Studio's Translations Editor. No build-file change needed; the locale list regenerates. Keep plural categories valid for the locale or `lint` flags `MissingQuantity`. The `:xposed` module's two strings (`app_name`, `xposed_description`) are not yet localized.
+
 ## Scope constraints
 
 Intentionally small. Do not add screenshot history, gallery browsing, editing, cloud sync, widgets, or Wear/TV support. The Xposed target is Android 16 Pixel SystemUI only — do not generalize it.

@@ -2,6 +2,7 @@ package art.yniyniyni.cliptic.tile
 
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import art.yniyniyni.cliptic.R
 import art.yniyniyni.cliptic.settings.ClipticSettings
 
 class ScreenshotTileService : TileService() {
@@ -24,7 +25,7 @@ class ScreenshotTileService : TileService() {
         val active = ClipticSettings.shouldRunScreenshotService(this)
         qsTile?.apply {
             state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            label = "Cliptic"
+            label = getString(R.string.app_name)
             updateTile()
         }
     }

@@ -13,8 +13,8 @@ android {
         applicationId = "art.yniyniyni.cliptic"
         minSdk = 34
         targetSdk = 36
-        versionCode = 30052026
-        versionName = "1.0.3"
+        versionCode = 300520262
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
@@ -39,6 +39,14 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    androidResources {
+        // Auto-generate the per-app language list (locale_config.xml) from the
+        // values-* resource folders present, and inject android:localeConfig into
+        // the merged manifest. Lets Cliptic appear in Android's per-app language
+        // picker (Settings → System → Languages → App languages). The unqualified
+        // values/ locale is declared in app/src/main/res/resources.properties.
+        generateLocaleConfig = true
     }
 }
 

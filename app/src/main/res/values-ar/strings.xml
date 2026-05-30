@@ -1,0 +1,109 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+
+    <!-- Service / notifications -->
+    <string name="screenshot_copied">تم نسخ لقطة الشاشة</string>
+    <string name="service_channel_name">مراقبة لقطات الشاشة</string>
+    <string name="service_notification_title">Cliptic يراقب لقطات الشاشة</string>
+    <string name="service_notification_text">يتم نسخ لقطات الشاشة الجديدة تلقائيًا.</string>
+    <string name="service_stop">إيقاف</string>
+    <string name="trash_channel_name">تنظيف لقطات الشاشة</string>
+    <string name="trash_notification_title">حذف لقطة الشاشة الأصلية</string>
+    <string name="trash_notification_text">أكِّد الحذف من المعرض.</string>
+    <string name="trash_notification_text_pending">أكِّد الحذف من المعرض. قيد الانتظار: %1$d</string>
+    <string name="trash_notification_action">حذف الأصل</string>
+
+    <!-- Generic actions -->
+    <string name="action_back">رجوع</string>
+    <string name="action_settings">الإعدادات</string>
+    <string name="action_open">فتح</string>
+    <string name="action_grant">منح</string>
+    <string name="action_granted">تم المنح</string>
+    <string name="action_remove">حذف</string>
+    <string name="action_view_source">عرض الكود المصدري</string>
+
+    <!-- Home: section + behavior settings -->
+    <string name="home_section_behavior">السلوك</string>
+    <string name="setting_auto_copy_title">نسخ لقطات الشاشة تلقائيًا</string>
+    <string name="setting_auto_copy_summary">أضِف لقطات الشاشة الجديدة فورًا إلى حافظة Cliptic.</string>
+    <string name="setting_share_sheet_title">الظهور في قائمة المشاركة</string>
+    <string name="setting_share_sheet_summary">شارِك الروابط والصور بسرعة من التطبيقات الأخرى.</string>
+    <string name="setting_remove_original_title">حذف الأصل بعد النسخ</string>
+    <string name="setting_remove_original_summary">حافِظ على نظافة معرضك بحذف المصدر.</string>
+
+    <!-- Hero status card -->
+    <string name="hero_service_active">الخدمة نشطة</string>
+    <string name="hero_service_inactive">الخدمة متوقفة</string>
+    <string name="hero_title_on">مزامنة تلقائية سحرية</string>
+    <string name="hero_title_off">السحر التلقائي متوقف</string>
+    <string name="hero_subtitle_on">تتم مراقبة لقطات الشاشة الجديدة.</string>
+    <string name="hero_subtitle_off">لا يتم نسخ لقطات الشاشة حاليًا.</string>
+    <string name="stat_copied_today">نُسخت اليوم</string>
+    <string name="stat_last_copy">آخر نسخة</string>
+    <string name="stat_on_clipboard">في الحافظة</string>
+    <string name="action_start_monitoring">بدء المراقبة</string>
+    <string name="action_pause_monitoring">إيقاف مؤقت</string>
+
+    <!-- Relative time / retention -->
+    <string name="time_none">—</string>
+    <string name="time_just_now">الآن</string>
+    <string name="time_minutes_ago">قبل %1$d دقيقة</string>
+    <string name="time_hours_ago">قبل %1$d ساعة</string>
+    <string name="time_days_ago">قبل %1$d يوم</string>
+    <string name="retention_minutes">%1$d دقيقة</string>
+    <string name="retention_hours">%1$d ساعة</string>
+
+    <!-- Pending originals banner -->
+    <plurals name="pending_originals_waiting">
+        <item quantity="zero">%1$d نسخة أصلية قيد الانتظار</item>
+        <item quantity="one">نسخة أصلية واحدة قيد الانتظار</item>
+        <item quantity="two">نسختان أصليتان قيد الانتظار</item>
+        <item quantity="few">%1$d نسخ أصلية قيد الانتظار</item>
+        <item quantity="many">%1$d نسخة أصلية قيد الانتظار</item>
+        <item quantity="other">%1$d نسخة أصلية قيد الانتظار</item>
+    </plurals>
+    <string name="pending_originals_summary">انقر لحذف لقطات الشاشة المصدر.</string>
+
+    <!-- Media access warning -->
+    <string name="media_warning_partial_title">وصول محدود إلى الصور</string>
+    <string name="media_warning_partial_message">الوصول المحدود مُفعَّل، لذا لا يستطيع Cliptic رؤية لقطات الشاشة الجديدة. اسمح بالوصول إلى جميع الصور.</string>
+    <string name="media_warning_partial_action">السماح بالكل</string>
+    <string name="media_warning_none_title">مطلوب الوصول إلى الصور</string>
+    <string name="media_warning_none_message">يحتاج Cliptic إلى الوصول إلى صورك لقراءة لقطات الشاشة.</string>
+    <string name="media_warning_none_action">منح الوصول</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">انسخ لقطات الشاشة تلقائيًا بسحر</string>
+    <string name="onboarding_subtitle">يراقب Cliptic لقطات الشاشة الجديدة ويضعها مباشرةً في الحافظة — الصق في أي مكان دون معرض.</string>
+    <string name="onboarding_perm_photos_title">الوصول إلى صورك</string>
+    <string name="onboarding_perm_photos_summary">لقراءة لقطات الشاشة الجديدة فور التقاطها.</string>
+    <string name="onboarding_perm_notification_title">عرض إشعار</string>
+    <string name="onboarding_perm_notification_summary">مطلوب لمواصلة المراقبة في الخلفية.</string>
+    <string name="onboarding_grant">منح ومتابعة</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_section_general">عام</string>
+    <string name="setting_start_on_boot_title">التشغيل عند الإقلاع</string>
+    <string name="setting_start_on_boot_summary">تشغيل Cliptic تلقائيًا عند بدء تشغيل الجهاز.</string>
+    <string name="setting_media_management_title">الوصول إلى إدارة الوسائط</string>
+    <string name="setting_media_management_summary_granted">يمكن حذف لقطات الشاشة الأصلية دون مطالبة.</string>
+    <string name="setting_media_management_summary_pending">امنح الوصول لحذف الأصول قيد الانتظار تلقائيًا.</string>
+    <string name="setting_media_management_summary_default">بدون ذلك، سيسأل Android قبل حذف الأصول.</string>
+    <string name="settings_section_notification">الإشعار</string>
+    <string name="setting_service_notification_title">إشعار الخدمة</string>
+    <string name="setting_service_notification_summary">اضبط الظهور في إعدادات Android. لا يمكن إخفاؤه أثناء تشغيل الخدمة.</string>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">الوحدة نشطة</string>
+    <string name="copy_mode_auto">تلقائي فقط</string>
+    <string name="copy_mode_xposed">LSPosed فقط</string>
+    <string name="copy_mode_both">كلاهما</string>
+    <string name="settings_section_about">حول</string>
+    <string name="about_version">الإصدار %1$s</string>
+
+    <!-- Language picker -->
+    <string name="settings_section_language">اللغة</string>
+    <string name="language_picker_title">لغة التطبيق</string>
+    <string name="setting_app_language_summary">اختر اللغة التي يستخدمها Cliptic.</string>
+    <string name="language_system_default">إعداد النظام الافتراضي</string>
+</resources>

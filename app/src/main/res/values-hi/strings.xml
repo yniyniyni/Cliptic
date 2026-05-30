@@ -1,0 +1,105 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+
+    <!-- Service / notifications -->
+    <string name="screenshot_copied">स्क्रीनशॉट कॉपी किया गया</string>
+    <string name="service_channel_name">स्क्रीनशॉट मॉनिटर</string>
+    <string name="service_notification_title">Cliptic स्क्रीनशॉट देख रहा है</string>
+    <string name="service_notification_text">नए स्क्रीनशॉट अपने आप कॉपी हो जाते हैं।</string>
+    <string name="service_stop">रोकें</string>
+    <string name="trash_channel_name">स्क्रीनशॉट सफ़ाई</string>
+    <string name="trash_notification_title">मूल स्क्रीनशॉट हटाएँ</string>
+    <string name="trash_notification_text">गैलरी से हटाने की पुष्टि करें।</string>
+    <string name="trash_notification_text_pending">गैलरी से हटाने की पुष्टि करें। लंबित: %1$d</string>
+    <string name="trash_notification_action">मूल हटाएँ</string>
+
+    <!-- Generic actions -->
+    <string name="action_back">वापस</string>
+    <string name="action_settings">सेटिंग</string>
+    <string name="action_open">खोलें</string>
+    <string name="action_grant">अनुमति दें</string>
+    <string name="action_granted">अनुमति दी गई</string>
+    <string name="action_remove">हटाएँ</string>
+    <string name="action_view_source">सोर्स कोड देखें</string>
+
+    <!-- Home: section + behavior settings -->
+    <string name="home_section_behavior">व्यवहार</string>
+    <string name="setting_auto_copy_title">स्क्रीनशॉट अपने आप कॉपी करें</string>
+    <string name="setting_auto_copy_summary">नए स्क्रीनशॉट तुरंत अपने Cliptic बोर्ड में जोड़ें।</string>
+    <string name="setting_share_sheet_title">शेयर मेन्यू में दिखाएँ</string>
+    <string name="setting_share_sheet_summary">अन्य ऐप्स से लिंक और इमेज जल्दी भेजें।</string>
+    <string name="setting_remove_original_title">कॉपी के बाद मूल हटाएँ</string>
+    <string name="setting_remove_original_summary">स्रोत हटाकर अपनी गैलरी साफ़ रखें।</string>
+
+    <!-- Hero status card -->
+    <string name="hero_service_active">सेवा सक्रिय</string>
+    <string name="hero_service_inactive">सेवा निष्क्रिय</string>
+    <string name="hero_title_on">ऑटोमैजिक सिंक</string>
+    <string name="hero_title_off">ऑटोमैजिक बंद</string>
+    <string name="hero_subtitle_on">नए स्क्रीनशॉट देखे जा रहे हैं।</string>
+    <string name="hero_subtitle_off">अभी स्क्रीनशॉट कॉपी नहीं हो रहे।</string>
+    <string name="stat_copied_today">आज कॉपी किए</string>
+    <string name="stat_last_copy">अंतिम कॉपी</string>
+    <string name="stat_on_clipboard">क्लिपबोर्ड पर</string>
+    <string name="action_start_monitoring">निगरानी शुरू करें</string>
+    <string name="action_pause_monitoring">रोकें</string>
+
+    <!-- Relative time / retention -->
+    <string name="time_none">—</string>
+    <string name="time_just_now">अभी</string>
+    <string name="time_minutes_ago">%1$d मिनट पहले</string>
+    <string name="time_hours_ago">%1$d घंटे पहले</string>
+    <string name="time_days_ago">%1$d दिन पहले</string>
+    <string name="retention_minutes">%1$d मिनट</string>
+    <string name="retention_hours">%1$d घंटे</string>
+
+    <!-- Pending originals banner -->
+    <plurals name="pending_originals_waiting">
+        <item quantity="one">%1$d मूल प्रतीक्षारत</item>
+        <item quantity="other">%1$d मूल प्रतीक्षारत</item>
+    </plurals>
+    <string name="pending_originals_summary">स्रोत स्क्रीनशॉट हटाने के लिए टैप करें।</string>
+
+    <!-- Media access warning -->
+    <string name="media_warning_partial_title">सीमित फ़ोटो एक्सेस</string>
+    <string name="media_warning_partial_message">सीमित एक्सेस चालू है, इसलिए Cliptic नए स्क्रीनशॉट नहीं देख सकता। सभी फ़ोटो तक एक्सेस की अनुमति दें।</string>
+    <string name="media_warning_partial_action">सभी अनुमति दें</string>
+    <string name="media_warning_none_title">फ़ोटो एक्सेस आवश्यक</string>
+    <string name="media_warning_none_message">स्क्रीनशॉट पढ़ने के लिए Cliptic को आपकी फ़ोटो तक एक्सेस चाहिए।</string>
+    <string name="media_warning_none_action">एक्सेस दें</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">स्क्रीनशॉट कॉपी करें, ऑटोमैजिकली</string>
+    <string name="onboarding_subtitle">Cliptic नए स्क्रीनशॉट देखता है और उन्हें सीधे क्लिपबोर्ड पर रख देता है — कहीं भी पेस्ट करें, गैलरी की ज़रूरत नहीं।</string>
+    <string name="onboarding_perm_photos_title">अपनी फ़ोटो एक्सेस करें</string>
+    <string name="onboarding_perm_photos_summary">नए स्क्रीनशॉट लेते ही उन्हें पढ़ने के लिए।</string>
+    <string name="onboarding_perm_notification_title">सूचना दिखाएँ</string>
+    <string name="onboarding_perm_notification_summary">बैकग्राउंड में निगरानी जारी रखने के लिए आवश्यक।</string>
+    <string name="onboarding_grant">अनुमति दें और जारी रखें</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">सेटिंग</string>
+    <string name="settings_section_general">सामान्य</string>
+    <string name="setting_start_on_boot_title">बूट पर शुरू करें</string>
+    <string name="setting_start_on_boot_summary">डिवाइस चालू होने पर Cliptic अपने आप शुरू करें।</string>
+    <string name="setting_media_management_title">मीडिया प्रबंधन एक्सेस</string>
+    <string name="setting_media_management_summary_granted">मूल स्क्रीनशॉट बिना पूछे हटाए जा सकते हैं।</string>
+    <string name="setting_media_management_summary_pending">लंबित मूल अपने आप हटाने के लिए एक्सेस दें।</string>
+    <string name="setting_media_management_summary_default">इसके बिना, Android मूल हटाने से पहले पूछेगा।</string>
+    <string name="settings_section_notification">सूचना</string>
+    <string name="setting_service_notification_title">सेवा सूचना</string>
+    <string name="setting_service_notification_summary">Android सेटिंग में दृश्यता समायोजित करें। सेवा चलने के दौरान इसे छिपाया नहीं जा सकता।</string>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">मॉड्यूल सक्रिय</string>
+    <string name="copy_mode_auto">केवल ऑटो</string>
+    <string name="copy_mode_xposed">केवल LSPosed</string>
+    <string name="copy_mode_both">दोनों</string>
+    <string name="settings_section_about">परिचय</string>
+    <string name="about_version">संस्करण %1$s</string>
+
+    <!-- Language picker -->
+    <string name="settings_section_language">भाषा</string>
+    <string name="language_picker_title">ऐप भाषा</string>
+    <string name="setting_app_language_summary">Cliptic जिस भाषा का उपयोग करता है उसे चुनें।</string>
+    <string name="language_system_default">सिस्टम डिफ़ॉल्ट</string>
+</resources>

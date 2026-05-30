@@ -24,15 +24,18 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,12 +50,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -91,7 +96,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -101,6 +109,7 @@ import art.yniyniyni.cliptic.core.util.XposedBridge
 import art.yniyniyni.cliptic.permission.MediaAccess
 import art.yniyniyni.cliptic.permission.MediaAccessLevel
 import art.yniyniyni.cliptic.service.ScreenshotService
+import art.yniyniyni.cliptic.settings.AppLanguages
 import art.yniyniyni.cliptic.settings.ClipticSettings
 import art.yniyniyni.cliptic.ui.theme.ClipticTheme
 import kotlinx.coroutines.launch
@@ -373,23 +382,23 @@ private fun HomeScreen(
             PendingOriginalsBanner(count = pendingOriginalCount, onRemove = onRemoveOriginal)
         }
 
-        SectionLabel("Behavior")
+        SectionLabel(stringResource(R.string.home_section_behavior))
         SettingsCard {
             SettingRow(
                 icon = Icons.Outlined.ContentCopy,
-                title = "Auto-copy screenshots",
-                summary = "Instantly add new screenshots to your Cliptic board."
+                title = stringResource(R.string.setting_auto_copy_title),
+                summary = stringResource(R.string.setting_auto_copy_summary)
             ) { Switch(checked = autoCopyEnabled, onCheckedChange = onAutoCopyChange) }
             SettingRow(
                 icon = Icons.Outlined.IosShare,
-                title = "Appear in Share Sheet",
-                summary = "Quickly send links and images from other apps.",
+                title = stringResource(R.string.setting_share_sheet_title),
+                summary = stringResource(R.string.setting_share_sheet_summary),
                 divider = true
             ) { Switch(checked = shareSheetEnabled, onCheckedChange = onShareSheetChange) }
             SettingRow(
                 icon = Icons.Outlined.CleaningServices,
-                title = "Remove original after copy",
-                summary = "Keep your camera roll clean by deleting the source.",
+                title = stringResource(R.string.setting_remove_original_title),
+                summary = stringResource(R.string.setting_remove_original_summary),
                 divider = true
             ) { Switch(checked = removeOriginalAfterCopy, onCheckedChange = onRemoveOriginalChange) }
         }
@@ -413,6 +422,14 @@ private fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    var languageSheetVisible by remember { mutableStateOf(false) }
+    val currentLanguageTag = remember { AppLanguages.current(context) }
+    val currentLanguageLabel = if (currentLanguageTag == AppLanguages.SYSTEM_DEFAULT) {
+        stringResource(R.string.language_system_default)
+    } else {
+        AppLanguages.autonyms[currentLanguageTag] ?: currentLanguageTag
+    }
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -425,50 +442,65 @@ private fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            IconPillButton(Icons.AutoMirrored.Outlined.ArrowBack, "Back", onBack)
+            IconPillButton(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.action_back), onBack)
             Text(
-                text = "Settings",
+                text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.headlineMedium,
                 color = colorScheme.onBackground
             )
         }
 
-        SectionLabel("General")
+        SectionLabel(stringResource(R.string.settings_section_general))
         SettingsCard {
             SettingRow(
                 icon = Icons.Outlined.RestartAlt,
-                title = "Start on boot",
-                summary = "Launch Cliptic automatically when the device starts."
+                title = stringResource(R.string.setting_start_on_boot_title),
+                summary = stringResource(R.string.setting_start_on_boot_summary)
             ) { Switch(checked = startOnBoot, onCheckedChange = onStartOnBootChange) }
             SettingRow(
                 icon = Icons.Outlined.AdminPanelSettings,
-                title = "Media management access",
+                title = stringResource(R.string.setting_media_management_title),
                 summary = when {
-                    mediaManagementGranted -> "Original screenshots can be removed without a prompt."
-                    pendingOriginalCount > 0 -> "Grant access to remove pending originals automatically."
-                    else -> "Without this, Android will ask before removing originals."
+                    mediaManagementGranted -> stringResource(R.string.setting_media_management_summary_granted)
+                    pendingOriginalCount > 0 -> stringResource(R.string.setting_media_management_summary_pending)
+                    else -> stringResource(R.string.setting_media_management_summary_default)
                 },
                 divider = true
             ) {
                 PillButton(
-                    label = if (mediaManagementGranted) "Granted" else "Grant",
+                    label = if (mediaManagementGranted) stringResource(R.string.action_granted) else stringResource(R.string.action_grant),
                     onClick = onOpenMediaSettings,
                     enabled = !mediaManagementGranted
                 )
             }
         }
 
-        SectionLabel("Notification")
+        SectionLabel(stringResource(R.string.settings_section_language))
+        SettingsCard {
+            SettingRow(
+                icon = Icons.Outlined.Language,
+                title = stringResource(R.string.language_picker_title),
+                summary = stringResource(R.string.setting_app_language_summary)
+            ) {
+                PillButton(
+                    label = currentLanguageLabel,
+                    onClick = { languageSheetVisible = true },
+                    outlined = true
+                )
+            }
+        }
+
+        SectionLabel(stringResource(R.string.settings_section_notification))
         SettingsCard {
             SettingRow(
                 icon = Icons.Outlined.Notifications,
-                title = "Service notification",
-                summary = "Adjust visibility in Android settings. It can't be hidden while the service runs."
-            ) { PillButton(label = "Open", onClick = onOpenNotificationSettings, outlined = true) }
+                title = stringResource(R.string.setting_service_notification_title),
+                summary = stringResource(R.string.setting_service_notification_summary)
+            ) { PillButton(label = stringResource(R.string.action_open), onClick = onOpenNotificationSettings, outlined = true) }
         }
 
         if (xposedActive) {
-            SectionLabel("LSPosed")
+            SectionLabel(stringResource(R.string.settings_section_lsposed))
             GlassCard {
                 Surface(
                     shape = RoundedCornerShape(50),
@@ -487,7 +519,7 @@ private fun SettingsScreen(
                                 .background(colorScheme.primary)
                         )
                         Text(
-                            text = "MODULE ACTIVE",
+                            text = stringResource(R.string.lsposed_module_active),
                             style = MaterialTheme.typography.labelSmall,
                             color = colorScheme.primary
                         )
@@ -497,7 +529,7 @@ private fun SettingsScreen(
             }
         }
 
-        SectionLabel("About")
+        SectionLabel(stringResource(R.string.settings_section_about))
         GlassCard {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -521,10 +553,10 @@ private fun SettingsScreen(
                     }
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Cliptic", style = MaterialTheme.typography.titleSmall, color = colorScheme.onSurface)
+                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleSmall, color = colorScheme.onSurface)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "Version ${BuildConfig.VERSION_NAME}",
+                        text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurfaceVariant
                     )
@@ -541,8 +573,70 @@ private fun SettingsScreen(
             ) {
                 Icon(Icons.Outlined.Code, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("View source code")
+                Text(stringResource(R.string.action_view_source))
             }
+        }
+    }
+
+    if (languageSheetVisible) {
+        ModalBottomSheet(onDismissRequest = { languageSheetVisible = false }) {
+            LanguagePickerContent(
+                currentTag = currentLanguageTag,
+                onSelect = { tag ->
+                    languageSheetVisible = false
+                    // Persists the choice and recreates the activity in the new locale.
+                    AppLanguages.set(context, tag)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun LanguagePickerContent(currentTag: String, onSelect: (String) -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Text(
+        text = stringResource(R.string.language_picker_title),
+        style = MaterialTheme.typography.titleMedium,
+        color = colorScheme.onSurface,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+    )
+    Column(modifier = Modifier.padding(bottom = 24.dp)) {
+        AppLanguages.tags.forEach { tag ->
+            val label = if (tag == AppLanguages.SYSTEM_DEFAULT) {
+                stringResource(R.string.language_system_default)
+            } else {
+                AppLanguages.autonyms[tag] ?: tag
+            }
+            LanguageRow(label = label, selected = tag == currentTag) { onSelect(tag) }
+        }
+    }
+}
+
+@Composable
+private fun LanguageRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (selected) colorScheme.primary else colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        if (selected) {
+            Icon(
+                Icons.Outlined.Check,
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -565,12 +659,12 @@ private fun HomeTopBar(onOpenSettings: () -> Unit) {
                 modifier = Modifier.size(24.dp)
             )
             Text(
-                text = "Cliptic",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = colorScheme.primary
             )
         }
-        IconPillButton(Icons.Outlined.Settings, "Settings", onOpenSettings)
+        IconPillButton(Icons.Outlined.Settings, stringResource(R.string.action_settings), onOpenSettings)
     }
 }
 
@@ -605,6 +699,7 @@ private fun HeroStatusCard(
     onPause: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -643,7 +738,7 @@ private fun HeroStatusCard(
                                 .background(if (serviceRunning) colorScheme.primary else colorScheme.outline)
                         )
                         Text(
-                            text = if (serviceRunning) "SERVICE ACTIVE" else "SERVICE INACTIVE",
+                            text = stringResource(if (serviceRunning) R.string.hero_service_active else R.string.hero_service_inactive),
                             style = MaterialTheme.typography.labelSmall,
                             color = colorScheme.onSurfaceVariant
                         )
@@ -671,14 +766,14 @@ private fun HeroStatusCard(
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = if (serviceRunning) "Automagic Sync" else "Automagic Off",
+                    text = stringResource(if (serviceRunning) R.string.hero_title_on else R.string.hero_title_off),
                     style = MaterialTheme.typography.displayLarge.copy(fontSize = 34.sp, lineHeight = 40.sp),
                     color = colorScheme.onBackground,
-                    maxLines = 1,
-                    softWrap = false
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = if (serviceRunning) "Watching for new screenshots." else "Screenshots aren't being copied right now.",
+                    text = stringResource(if (serviceRunning) R.string.hero_subtitle_on else R.string.hero_subtitle_off),
                     style = MaterialTheme.typography.bodyMedium,
                     color = colorScheme.onSurfaceVariant
                 )
@@ -694,12 +789,14 @@ private fun HeroStatusCard(
                 ) {
                     Column {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Min),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            StatChip(value = copyCountToday.toString(), label = "Copied today")
-                            StatChip(value = formatRelativeTime(lastCopyAt), label = "Last copy")
-                            StatChip(value = formatRetention(retentionMs), label = "On clipboard")
+                            StatChip(value = copyCountToday.toString(), label = stringResource(R.string.stat_copied_today))
+                            StatChip(value = formatRelativeTime(context, lastCopyAt), label = stringResource(R.string.stat_last_copy))
+                            StatChip(value = formatRetention(context, retentionMs), label = stringResource(R.string.stat_on_clipboard))
                         }
                         Spacer(Modifier.height(16.dp))
                     }
@@ -718,7 +815,7 @@ private fun HeroStatusCard(
                         ) {
                             Icon(Icons.Outlined.Pause, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Pause Monitoring")
+                            Text(stringResource(R.string.action_pause_monitoring))
                         }
                     } else {
                         Button(
@@ -728,7 +825,7 @@ private fun HeroStatusCard(
                         ) {
                             Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Start Monitoring")
+                            Text(stringResource(R.string.action_start_monitoring))
                         }
                     }
                 }
@@ -741,7 +838,9 @@ private fun HeroStatusCard(
 private fun RowScope.StatChip(value: String, label: String) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight(),
         shape = RoundedCornerShape(14.dp),
         color = colorScheme.surface.copy(alpha = 0.5f),
         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f)),
@@ -753,8 +852,8 @@ private fun RowScope.StatChip(value: String, label: String) {
                 text = value,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
                 color = colorScheme.onBackground,
-                maxLines = 1,
-                softWrap = false
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -789,18 +888,18 @@ private fun PendingOriginalsBanner(count: Int, onRemove: () -> Unit) {
             IconTile(Icons.Outlined.DeleteSweep)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (count == 1) "1 original waiting" else "$count originals waiting",
+                    text = pluralStringResource(R.plurals.pending_originals_waiting, count, count),
                     style = MaterialTheme.typography.titleSmall,
                     color = colorScheme.onSurface
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = "Tap to remove the source screenshots.",
+                    text = stringResource(R.string.pending_originals_summary),
                     style = MaterialTheme.typography.bodySmall,
                     color = colorScheme.onSurfaceVariant
                 )
             }
-            PillButton(label = "Remove", onClick = onRemove)
+            PillButton(label = stringResource(R.string.action_remove), onClick = onRemove)
         }
     }
 }
@@ -933,9 +1032,9 @@ private fun MediaAccessWarning(
     val colorScheme = MaterialTheme.colorScheme
     val (message, action) = when (level) {
         MediaAccessLevel.PARTIAL ->
-            "Limited access is on, so Cliptic can't see new screenshots. Allow access to all photos." to "Allow all"
+            stringResource(R.string.media_warning_partial_message) to stringResource(R.string.media_warning_partial_action)
         else ->
-            "Cliptic needs access to your photos to read screenshots." to "Grant access"
+            stringResource(R.string.media_warning_none_message) to stringResource(R.string.media_warning_none_action)
     }
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -960,7 +1059,7 @@ private fun MediaAccessWarning(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (level == MediaAccessLevel.PARTIAL) "Limited photo access" else "Photo access needed",
+                    text = stringResource(if (level == MediaAccessLevel.PARTIAL) R.string.media_warning_partial_title else R.string.media_warning_none_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = colorScheme.onErrorContainer
                 )
@@ -1006,12 +1105,12 @@ private fun OnboardingContent(onGrant: () -> Unit) {
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "Copy screenshots, automagically",
+                text = stringResource(R.string.onboarding_title),
                 style = MaterialTheme.typography.headlineMedium,
                 color = colorScheme.onSurface
             )
             Text(
-                text = "Cliptic watches for new screenshots and drops them straight onto the clipboard — paste anywhere, no gallery.",
+                text = stringResource(R.string.onboarding_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurfaceVariant
             )
@@ -1019,13 +1118,13 @@ private fun OnboardingContent(onGrant: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             OnboardingPermission(
                 icon = Icons.Outlined.PhotoLibrary,
-                title = "Access your photos",
-                summary = "To read new screenshots as they're taken."
+                title = stringResource(R.string.onboarding_perm_photos_title),
+                summary = stringResource(R.string.onboarding_perm_photos_summary)
             )
             OnboardingPermission(
                 icon = Icons.Outlined.Notifications,
-                title = "Show a notification",
-                summary = "Required to keep watching in the background."
+                title = stringResource(R.string.onboarding_perm_notification_title),
+                summary = stringResource(R.string.onboarding_perm_notification_summary)
             )
         }
         Button(
@@ -1033,7 +1132,7 @@ private fun OnboardingContent(onGrant: () -> Unit) {
             onClick = onGrant,
             shape = RoundedCornerShape(50)
         ) {
-            Text("Grant & Continue")
+            Text(stringResource(R.string.onboarding_grant))
         }
     }
 }
@@ -1079,9 +1178,9 @@ private fun CopyModePicker(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CopyModeChip("Auto only", ClipticSettings.COPY_MODE_AUTO, copyMode, onCopyModeChange)
-            CopyModeChip("LSPosed only", ClipticSettings.COPY_MODE_XPOSED, copyMode, onCopyModeChange)
-            CopyModeChip("Both", ClipticSettings.COPY_MODE_BOTH, copyMode, onCopyModeChange)
+            CopyModeChip(stringResource(R.string.copy_mode_auto), ClipticSettings.COPY_MODE_AUTO, copyMode, onCopyModeChange)
+            CopyModeChip(stringResource(R.string.copy_mode_xposed), ClipticSettings.COPY_MODE_XPOSED, copyMode, onCopyModeChange)
+            CopyModeChip(stringResource(R.string.copy_mode_both), ClipticSettings.COPY_MODE_BOTH, copyMode, onCopyModeChange)
         }
     }
 }
@@ -1142,18 +1241,22 @@ private fun CopyModeChip(
     }
 }
 
-private fun formatRelativeTime(epochMillis: Long): String {
-    if (epochMillis <= 0L) return "—"
+private fun formatRelativeTime(context: android.content.Context, epochMillis: Long): String {
+    if (epochMillis <= 0L) return context.getString(R.string.time_none)
     val diff = System.currentTimeMillis() - epochMillis
     return when {
-        diff < 60_000L -> "Just now"
-        diff < 3_600_000L -> "${diff / 60_000L}m ago"
-        diff < 86_400_000L -> "${diff / 3_600_000L}h ago"
-        else -> "${diff / 86_400_000L}d ago"
+        diff < 60_000L -> context.getString(R.string.time_just_now)
+        diff < 3_600_000L -> context.getString(R.string.time_minutes_ago, (diff / 60_000L).toInt())
+        diff < 86_400_000L -> context.getString(R.string.time_hours_ago, (diff / 3_600_000L).toInt())
+        else -> context.getString(R.string.time_days_ago, (diff / 86_400_000L).toInt())
     }
 }
 
-private fun formatRetention(ms: Long): String {
+private fun formatRetention(context: android.content.Context, ms: Long): String {
     val minutes = ms / 60_000L
-    return if (minutes >= 60L) "${minutes / 60L}h" else "${minutes}m"
+    return if (minutes >= 60L) {
+        context.getString(R.string.retention_hours, (minutes / 60L).toInt())
+    } else {
+        context.getString(R.string.retention_minutes, minutes.toInt())
+    }
 }

@@ -1,0 +1,104 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+
+    <!-- Service / notifications -->
+    <string name="screenshot_copied">截图已复制</string>
+    <string name="service_channel_name">截图监控</string>
+    <string name="service_notification_title">Cliptic 正在监视截图</string>
+    <string name="service_notification_text">新截图将自动复制。</string>
+    <string name="service_stop">停止</string>
+    <string name="trash_channel_name">截图清理</string>
+    <string name="trash_notification_title">删除原始截图</string>
+    <string name="trash_notification_text">确认从相册中删除。</string>
+    <string name="trash_notification_text_pending">确认从相册中删除。待处理：%1$d</string>
+    <string name="trash_notification_action">删除原始文件</string>
+
+    <!-- Generic actions -->
+    <string name="action_back">返回</string>
+    <string name="action_settings">设置</string>
+    <string name="action_open">打开</string>
+    <string name="action_grant">授予</string>
+    <string name="action_granted">已授予</string>
+    <string name="action_remove">删除</string>
+    <string name="action_view_source">查看源代码</string>
+
+    <!-- Home: section + behavior settings -->
+    <string name="home_section_behavior">行为</string>
+    <string name="setting_auto_copy_title">自动复制截图</string>
+    <string name="setting_auto_copy_summary">立即将新截图添加到 Cliptic 剪贴板。</string>
+    <string name="setting_share_sheet_title">显示在分享菜单中</string>
+    <string name="setting_share_sheet_summary">快速从其他应用分享链接和图片。</string>
+    <string name="setting_remove_original_title">复制后删除原始文件</string>
+    <string name="setting_remove_original_summary">删除源文件，保持相册整洁。</string>
+
+    <!-- Hero status card -->
+    <string name="hero_service_active">服务运行中</string>
+    <string name="hero_service_inactive">服务已停止</string>
+    <string name="hero_title_on">自动同步已开启</string>
+    <string name="hero_title_off">自动同步已关闭</string>
+    <string name="hero_subtitle_on">正在监视新截图。</string>
+    <string name="hero_subtitle_off">目前未复制截图。</string>
+    <string name="stat_copied_today">今日已复制</string>
+    <string name="stat_last_copy">上次复制</string>
+    <string name="stat_on_clipboard">在剪贴板</string>
+    <string name="action_start_monitoring">开始监视</string>
+    <string name="action_pause_monitoring">暂停监视</string>
+
+    <!-- Relative time / retention -->
+    <string name="time_none">—</string>
+    <string name="time_just_now">刚刚</string>
+    <string name="time_minutes_ago">%1$d 分钟前</string>
+    <string name="time_hours_ago">%1$d 小时前</string>
+    <string name="time_days_ago">%1$d 天前</string>
+    <string name="retention_minutes">%1$d 分钟</string>
+    <string name="retention_hours">%1$d 小时</string>
+
+    <!-- Pending originals banner -->
+    <plurals name="pending_originals_waiting">
+        <item quantity="other">%1$d 个原始文件待处理</item>
+    </plurals>
+    <string name="pending_originals_summary">点按以删除源截图。</string>
+
+    <!-- Media access warning -->
+    <string name="media_warning_partial_title">照片访问受限</string>
+    <string name="media_warning_partial_message">已开启受限访问，Cliptic 无法看到新截图。请允许访问所有照片。</string>
+    <string name="media_warning_partial_action">允许全部</string>
+    <string name="media_warning_none_title">需要照片访问权限</string>
+    <string name="media_warning_none_message">Cliptic 需要访问您的照片才能读取截图。</string>
+    <string name="media_warning_none_action">授予访问权限</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">自动复制截图</string>
+    <string name="onboarding_subtitle">Cliptic 监视新截图并直接将其放入剪贴板——随处粘贴，无需打开相册。</string>
+    <string name="onboarding_perm_photos_title">访问您的照片</string>
+    <string name="onboarding_perm_photos_summary">用于在截图生成时读取它们。</string>
+    <string name="onboarding_perm_notification_title">显示通知</string>
+    <string name="onboarding_perm_notification_summary">用于在后台持续监视。</string>
+    <string name="onboarding_grant">授予并继续</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">设置</string>
+    <string name="settings_section_general">常规</string>
+    <string name="setting_start_on_boot_title">开机启动</string>
+    <string name="setting_start_on_boot_summary">设备启动时自动运行 Cliptic。</string>
+    <string name="setting_media_management_title">媒体管理权限</string>
+    <string name="setting_media_management_summary_granted">无需提示即可删除原始截图。</string>
+    <string name="setting_media_management_summary_pending">授予权限以自动删除待处理的原始文件。</string>
+    <string name="setting_media_management_summary_default">否则，Android 会在删除原始文件前询问。</string>
+    <string name="settings_section_notification">通知</string>
+    <string name="setting_service_notification_title">服务通知</string>
+    <string name="setting_service_notification_summary">在 Android 设置中调整可见性。服务运行时无法隐藏。</string>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">模块已激活</string>
+    <string name="copy_mode_auto">仅自动</string>
+    <string name="copy_mode_xposed">仅 LSPosed</string>
+    <string name="copy_mode_both">两者</string>
+    <string name="settings_section_about">关于</string>
+    <string name="about_version">版本 %1$s</string>
+
+    <!-- Language picker -->
+    <string name="settings_section_language">语言</string>
+    <string name="language_picker_title">应用语言</string>
+    <string name="setting_app_language_summary">选择 Cliptic 使用的语言。</string>
+    <string name="language_system_default">系统默认</string>
+</resources>

@@ -170,7 +170,7 @@ object OriginalScreenshotCleanup {
             .setContentTitle(context.getString(R.string.trash_notification_title))
             .setContentText(
                 if (pendingCount > 1) {
-                    "Confirm removal from the gallery. Pending: $pendingCount"
+                    context.getString(R.string.trash_notification_text_pending, pendingCount)
                 } else {
                     context.getString(R.string.trash_notification_text)
                 }

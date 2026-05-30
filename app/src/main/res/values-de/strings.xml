@@ -1,0 +1,105 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+
+    <!-- Service / notifications -->
+    <string name="screenshot_copied">Screenshot kopiert</string>
+    <string name="service_channel_name">Screenshot-Überwachung</string>
+    <string name="service_notification_title">Cliptic überwacht Screenshots</string>
+    <string name="service_notification_text">Neue Screenshots werden automatisch kopiert.</string>
+    <string name="service_stop">Stopp</string>
+    <string name="trash_channel_name">Screenshot-Bereinigung</string>
+    <string name="trash_notification_title">Original-Screenshot entfernen</string>
+    <string name="trash_notification_text">Entfernen aus der Galerie bestätigen.</string>
+    <string name="trash_notification_text_pending">Entfernen aus der Galerie bestätigen. Ausstehend: %1$d</string>
+    <string name="trash_notification_action">Original entfernen</string>
+
+    <!-- Generic actions -->
+    <string name="action_back">Zurück</string>
+    <string name="action_settings">Einstellungen</string>
+    <string name="action_open">Öffnen</string>
+    <string name="action_grant">Erlauben</string>
+    <string name="action_granted">Erlaubt</string>
+    <string name="action_remove">Entfernen</string>
+    <string name="action_view_source">Quellcode ansehen</string>
+
+    <!-- Home: section + behavior settings -->
+    <string name="home_section_behavior">Verhalten</string>
+    <string name="setting_auto_copy_title">Screenshots automatisch kopieren</string>
+    <string name="setting_auto_copy_summary">Neue Screenshots sofort zu deiner Cliptic-Ablage hinzufügen.</string>
+    <string name="setting_share_sheet_title">Im Teilen-Menü anzeigen</string>
+    <string name="setting_share_sheet_summary">Links und Bilder schnell aus anderen Apps senden.</string>
+    <string name="setting_remove_original_title">Original nach dem Kopieren entfernen</string>
+    <string name="setting_remove_original_summary">Halte deine Galerie sauber, indem du die Quelle löschst.</string>
+
+    <!-- Hero status card -->
+    <string name="hero_service_active">DIENST AKTIV</string>
+    <string name="hero_service_inactive">DIENST INAKTIV</string>
+    <string name="hero_title_on">Automagische Synchronisierung</string>
+    <string name="hero_title_off">Automagie aus</string>
+    <string name="hero_subtitle_on">Neue Screenshots werden überwacht.</string>
+    <string name="hero_subtitle_off">Derzeit werden keine Screenshots kopiert.</string>
+    <string name="stat_copied_today">Heute kopiert</string>
+    <string name="stat_last_copy">Letzte Kopie</string>
+    <string name="stat_on_clipboard">In Zwischenablage</string>
+    <string name="action_start_monitoring">Überwachung starten</string>
+    <string name="action_pause_monitoring">Pausieren</string>
+
+    <!-- Relative time / retention -->
+    <string name="time_none">—</string>
+    <string name="time_just_now">Gerade eben</string>
+    <string name="time_minutes_ago">vor %1$d Min.</string>
+    <string name="time_hours_ago">vor %1$d Std.</string>
+    <string name="time_days_ago">vor %1$d T.</string>
+    <string name="retention_minutes">%1$d Min.</string>
+    <string name="retention_hours">%1$d Std.</string>
+
+    <!-- Pending originals banner -->
+    <plurals name="pending_originals_waiting">
+        <item quantity="one">%1$d Original wartet</item>
+        <item quantity="other">%1$d Originale warten</item>
+    </plurals>
+    <string name="pending_originals_summary">Tippen, um die Quell-Screenshots zu entfernen.</string>
+
+    <!-- Media access warning -->
+    <string name="media_warning_partial_title">Eingeschränkter Fotozugriff</string>
+    <string name="media_warning_partial_message">Eingeschränkter Zugriff ist aktiv, daher sieht Cliptic keine neuen Screenshots. Erlaube den Zugriff auf alle Fotos.</string>
+    <string name="media_warning_partial_action">Alle erlauben</string>
+    <string name="media_warning_none_title">Fotozugriff erforderlich</string>
+    <string name="media_warning_none_message">Cliptic benötigt Zugriff auf deine Fotos, um Screenshots zu lesen.</string>
+    <string name="media_warning_none_action">Zugriff erlauben</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Screenshots automagisch kopieren</string>
+    <string name="onboarding_subtitle">Cliptic überwacht neue Screenshots und legt sie direkt in die Zwischenablage – überall einfügen, ohne Galerie.</string>
+    <string name="onboarding_perm_photos_title">Auf deine Fotos zugreifen</string>
+    <string name="onboarding_perm_photos_summary">Um neue Screenshots direkt nach der Aufnahme zu lesen.</string>
+    <string name="onboarding_perm_notification_title">Benachrichtigung anzeigen</string>
+    <string name="onboarding_perm_notification_summary">Erforderlich, um im Hintergrund weiter zu überwachen.</string>
+    <string name="onboarding_grant">Erlauben und fortfahren</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_section_general">Allgemein</string>
+    <string name="setting_start_on_boot_title">Beim Start ausführen</string>
+    <string name="setting_start_on_boot_summary">Cliptic automatisch starten, wenn das Gerät hochfährt.</string>
+    <string name="setting_media_management_title">Zugriff auf Medienverwaltung</string>
+    <string name="setting_media_management_summary_granted">Original-Screenshots können ohne Nachfrage entfernt werden.</string>
+    <string name="setting_media_management_summary_pending">Erlaube den Zugriff, um ausstehende Originale automatisch zu entfernen.</string>
+    <string name="setting_media_management_summary_default">Ohne dies fragt Android vor dem Entfernen von Originalen nach.</string>
+    <string name="settings_section_notification">Benachrichtigung</string>
+    <string name="setting_service_notification_title">Dienstbenachrichtigung</string>
+    <string name="setting_service_notification_summary">Passe die Sichtbarkeit in den Android-Einstellungen an. Sie kann nicht ausgeblendet werden, während der Dienst läuft.</string>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">MODUL AKTIV</string>
+    <string name="copy_mode_auto">Nur Auto</string>
+    <string name="copy_mode_xposed">Nur LSPosed</string>
+    <string name="copy_mode_both">Beide</string>
+    <string name="settings_section_about">Über</string>
+    <string name="about_version">Version %1$s</string>
+
+    <!-- Language picker -->
+    <string name="settings_section_language">Sprache</string>
+    <string name="language_picker_title">App-Sprache</string>
+    <string name="setting_app_language_summary">Wähle die Sprache, die Cliptic verwendet.</string>
+    <string name="language_system_default">Systemstandard</string>
+</resources>

@@ -1,0 +1,106 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+
+    <!-- Service / notifications -->
+    <string name="screenshot_copied">Captura copiada</string>
+    <string name="service_channel_name">Monitor de capturas</string>
+    <string name="service_notification_title">Cliptic está vigilando las capturas</string>
+    <string name="service_notification_text">Las capturas nuevas se copian automáticamente.</string>
+    <string name="service_stop">Detener</string>
+    <string name="trash_channel_name">Limpieza de capturas</string>
+    <string name="trash_notification_title">Eliminar captura original</string>
+    <string name="trash_notification_text">Confirma la eliminación de la galería.</string>
+    <string name="trash_notification_text_pending">Confirma la eliminación de la galería. Pendientes: %1$d</string>
+    <string name="trash_notification_action">Eliminar original</string>
+
+    <!-- Generic actions -->
+    <string name="action_back">Atrás</string>
+    <string name="action_settings">Ajustes</string>
+    <string name="action_open">Abrir</string>
+    <string name="action_grant">Conceder</string>
+    <string name="action_granted">Concedido</string>
+    <string name="action_remove">Eliminar</string>
+    <string name="action_view_source">Ver código fuente</string>
+
+    <!-- Home: section + behavior settings -->
+    <string name="home_section_behavior">Comportamiento</string>
+    <string name="setting_auto_copy_title">Copiar capturas automáticamente</string>
+    <string name="setting_auto_copy_summary">Añade al instante las capturas nuevas a tu portapapeles de Cliptic.</string>
+    <string name="setting_share_sheet_title">Mostrar en el menú Compartir</string>
+    <string name="setting_share_sheet_summary">Comparte rápidamente enlaces e imágenes desde otras apps.</string>
+    <string name="setting_remove_original_title">Eliminar original tras copiar</string>
+    <string name="setting_remove_original_summary">Mantén limpia tu galería eliminando el origen.</string>
+
+    <!-- Hero status card -->
+    <string name="hero_service_active">SERVICIO ACTIVO</string>
+    <string name="hero_service_inactive">SERVICIO INACTIVO</string>
+    <string name="hero_title_on">Sincronización automágica</string>
+    <string name="hero_title_off">Automagia desactivada</string>
+    <string name="hero_subtitle_on">Vigilando nuevas capturas.</string>
+    <string name="hero_subtitle_off">Ahora mismo no se están copiando capturas.</string>
+    <string name="stat_copied_today">Copiadas hoy</string>
+    <string name="stat_last_copy">Última copia</string>
+    <string name="stat_on_clipboard">En portapapeles</string>
+    <string name="action_start_monitoring">Iniciar supervisión</string>
+    <string name="action_pause_monitoring">Pausar</string>
+
+    <!-- Relative time / retention -->
+    <string name="time_none">—</string>
+    <string name="time_just_now">Ahora mismo</string>
+    <string name="time_minutes_ago">hace %1$d min</string>
+    <string name="time_hours_ago">hace %1$d h</string>
+    <string name="time_days_ago">hace %1$d d</string>
+    <string name="retention_minutes">%1$d min</string>
+    <string name="retention_hours">%1$d h</string>
+
+    <!-- Pending originals banner -->
+    <plurals name="pending_originals_waiting">
+        <item quantity="one">%1$d original en espera</item>
+        <item quantity="many">%1$d originales en espera</item>
+        <item quantity="other">%1$d originales en espera</item>
+    </plurals>
+    <string name="pending_originals_summary">Toca para eliminar las capturas de origen.</string>
+
+    <!-- Media access warning -->
+    <string name="media_warning_partial_title">Acceso a fotos limitado</string>
+    <string name="media_warning_partial_message">El acceso limitado está activado, así que Cliptic no puede ver las capturas nuevas. Permite el acceso a todas las fotos.</string>
+    <string name="media_warning_partial_action">Permitir todas</string>
+    <string name="media_warning_none_title">Se necesita acceso a las fotos</string>
+    <string name="media_warning_none_message">Cliptic necesita acceder a tus fotos para leer las capturas.</string>
+    <string name="media_warning_none_action">Conceder acceso</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Copia capturas, automágicamente</string>
+    <string name="onboarding_subtitle">Cliptic vigila las nuevas capturas y las coloca directamente en el portapapeles: pega donde quieras, sin galería.</string>
+    <string name="onboarding_perm_photos_title">Acceder a tus fotos</string>
+    <string name="onboarding_perm_photos_summary">Para leer las capturas nuevas en cuanto se toman.</string>
+    <string name="onboarding_perm_notification_title">Mostrar una notificación</string>
+    <string name="onboarding_perm_notification_summary">Necesaria para seguir vigilando en segundo plano.</string>
+    <string name="onboarding_grant">Conceder y continuar</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_section_general">General</string>
+    <string name="setting_start_on_boot_title">Iniciar al arrancar</string>
+    <string name="setting_start_on_boot_summary">Iniciar Cliptic automáticamente cuando se enciende el dispositivo.</string>
+    <string name="setting_media_management_title">Acceso a gestión de medios</string>
+    <string name="setting_media_management_summary_granted">Las capturas originales pueden eliminarse sin confirmación.</string>
+    <string name="setting_media_management_summary_pending">Concede acceso para eliminar automáticamente los originales pendientes.</string>
+    <string name="setting_media_management_summary_default">Sin esto, Android preguntará antes de eliminar los originales.</string>
+    <string name="settings_section_notification">Notificación</string>
+    <string name="setting_service_notification_title">Notificación del servicio</string>
+    <string name="setting_service_notification_summary">Ajusta la visibilidad en los ajustes de Android. No se puede ocultar mientras el servicio está activo.</string>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">MÓDULO ACTIVO</string>
+    <string name="copy_mode_auto">Solo automático</string>
+    <string name="copy_mode_xposed">Solo LSPosed</string>
+    <string name="copy_mode_both">Ambos</string>
+    <string name="settings_section_about">Acerca de</string>
+    <string name="about_version">Versión %1$s</string>
+
+    <!-- Language picker -->
+    <string name="settings_section_language">Idioma</string>
+    <string name="language_picker_title">Idioma de la app</string>
+    <string name="setting_app_language_summary">Elige el idioma que usa Cliptic.</string>
+    <string name="language_system_default">Predeterminado del sistema</string>
+</resources>

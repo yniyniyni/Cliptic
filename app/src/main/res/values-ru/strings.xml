@@ -1,0 +1,107 @@
+<resources>
+    <string name="app_name">Cliptic</string>
+
+    <!-- Service / notifications -->
+    <string name="screenshot_copied">Скриншот скопирован</string>
+    <string name="service_channel_name">Отслеживание скриншотов</string>
+    <string name="service_notification_title">Cliptic следит за скриншотами</string>
+    <string name="service_notification_text">Новые скриншоты копируются автоматически.</string>
+    <string name="service_stop">Стоп</string>
+    <string name="trash_channel_name">Очистка скриншотов</string>
+    <string name="trash_notification_title">Удалить исходный скриншот</string>
+    <string name="trash_notification_text">Подтвердите удаление из галереи.</string>
+    <string name="trash_notification_text_pending">Подтвердите удаление из галереи. В очереди: %1$d</string>
+    <string name="trash_notification_action">Удалить оригинал</string>
+
+    <!-- Generic actions -->
+    <string name="action_back">Назад</string>
+    <string name="action_settings">Настройки</string>
+    <string name="action_open">Открыть</string>
+    <string name="action_grant">Разрешить</string>
+    <string name="action_granted">Разрешено</string>
+    <string name="action_remove">Удалить</string>
+    <string name="action_view_source">Открыть исходный код</string>
+
+    <!-- Home: section + behavior settings -->
+    <string name="home_section_behavior">Поведение</string>
+    <string name="setting_auto_copy_title">Автокопирование скриншотов</string>
+    <string name="setting_auto_copy_summary">Мгновенно добавляйте новые скриншоты в буфер Cliptic.</string>
+    <string name="setting_share_sheet_title">Показывать в меню «Поделиться»</string>
+    <string name="setting_share_sheet_summary">Быстро отправляйте ссылки и изображения из других приложений.</string>
+    <string name="setting_remove_original_title">Удалять оригинал после копирования</string>
+    <string name="setting_remove_original_summary">Держите галерею чистой, удаляя исходник.</string>
+
+    <!-- Hero status card -->
+    <string name="hero_service_active">СЕРВИС АКТИВЕН</string>
+    <string name="hero_service_inactive">СЕРВИС ОТКЛЮЧЁН</string>
+    <string name="hero_title_on">Автомагия включена</string>
+    <string name="hero_title_off">Автомагия выключена</string>
+    <string name="hero_subtitle_on">Отслеживаю новые скриншоты.</string>
+    <string name="hero_subtitle_off">Скриншоты сейчас не копируются.</string>
+    <string name="stat_copied_today">Скопировано сегодня</string>
+    <string name="stat_last_copy">Последняя копия</string>
+    <string name="stat_on_clipboard">В буфере</string>
+    <string name="action_start_monitoring">Запустить отслеживание</string>
+    <string name="action_pause_monitoring">Приостановить</string>
+
+    <!-- Relative time / retention -->
+    <string name="time_none">—</string>
+    <string name="time_just_now">Только что</string>
+    <string name="time_minutes_ago">%1$d мин назад</string>
+    <string name="time_hours_ago">%1$d ч назад</string>
+    <string name="time_days_ago">%1$d дн назад</string>
+    <string name="retention_minutes">%1$d мин</string>
+    <string name="retention_hours">%1$d ч</string>
+
+    <!-- Pending originals banner -->
+    <plurals name="pending_originals_waiting">
+        <item quantity="one">%1$d оригинал ожидает</item>
+        <item quantity="few">%1$d оригинала ожидают</item>
+        <item quantity="many">%1$d оригиналов ожидают</item>
+        <item quantity="other">%1$d оригинала ожидает</item>
+    </plurals>
+    <string name="pending_originals_summary">Нажмите, чтобы удалить исходные скриншоты.</string>
+
+    <!-- Media access warning -->
+    <string name="media_warning_partial_title">Ограниченный доступ к фото</string>
+    <string name="media_warning_partial_message">Включён ограниченный доступ, поэтому Cliptic не видит новые скриншоты. Разрешите доступ ко всем фото.</string>
+    <string name="media_warning_partial_action">Разрешить все</string>
+    <string name="media_warning_none_title">Нужен доступ к фото</string>
+    <string name="media_warning_none_message">Cliptic нужен доступ к фото, чтобы читать скриншоты.</string>
+    <string name="media_warning_none_action">Предоставить доступ</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Копируйте скриншоты автомагически</string>
+    <string name="onboarding_subtitle">Cliptic отслеживает новые скриншоты и сразу кладёт их в буфер обмена — вставляйте где угодно, без галереи.</string>
+    <string name="onboarding_perm_photos_title">Доступ к фото</string>
+    <string name="onboarding_perm_photos_summary">Чтобы читать новые скриншоты сразу после съёмки.</string>
+    <string name="onboarding_perm_notification_title">Показ уведомления</string>
+    <string name="onboarding_perm_notification_summary">Нужно, чтобы продолжать работу в фоне.</string>
+    <string name="onboarding_grant">Разрешить и продолжить</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_section_general">Общие</string>
+    <string name="setting_start_on_boot_title">Запуск при загрузке</string>
+    <string name="setting_start_on_boot_summary">Автоматически запускать Cliptic при включении устройства.</string>
+    <string name="setting_media_management_title">Доступ к управлению медиа</string>
+    <string name="setting_media_management_summary_granted">Исходные скриншоты можно удалять без запроса.</string>
+    <string name="setting_media_management_summary_pending">Предоставьте доступ, чтобы удалять ожидающие оригиналы автоматически.</string>
+    <string name="setting_media_management_summary_default">Без этого Android будет спрашивать перед удалением оригиналов.</string>
+    <string name="settings_section_notification">Уведомление</string>
+    <string name="setting_service_notification_title">Уведомление сервиса</string>
+    <string name="setting_service_notification_summary">Настройте видимость в параметрах Android. Его нельзя скрыть, пока работает сервис.</string>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">МОДУЛЬ АКТИВЕН</string>
+    <string name="copy_mode_auto">Только авто</string>
+    <string name="copy_mode_xposed">Только LSPosed</string>
+    <string name="copy_mode_both">Оба</string>
+    <string name="settings_section_about">О приложении</string>
+    <string name="about_version">Версия %1$s</string>
+
+    <!-- Language picker -->
+    <string name="settings_section_language">Язык</string>
+    <string name="language_picker_title">Язык приложения</string>
+    <string name="setting_app_language_summary">Выберите язык интерфейса Cliptic.</string>
+    <string name="language_system_default">Системный по умолчанию</string>
+</resources>
