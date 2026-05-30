@@ -4,6 +4,12 @@ Cliptic (`clip + automatic`) is an Android app that copies screenshots to the cl
 
 **[Download latest release →](https://github.com/yniyniyni/Cliptic/releases/latest)**
 
+<p align="center">
+  <img src="res/screen1.png" width="230" alt="Home screen"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="res/screen2.png" width="230" alt="Settings screen"/>
+</p>
+
 ## Features
 
 **Standalone (no root required)**
@@ -68,6 +74,12 @@ When Cliptic receives an `image/*` share intent, `ShareReceiverActivity` runs th
 `CopyButtonInjector` hooks `ScreenshotShelfViewBinder.access$updateActions` in the `com.android.systemui` process, prepending a `Copy` `ActionButtonViewModel` to the action list so the framework renders, styles, and recycles the chip exactly like Share and Edit. On tap the module reads the IPC secret from `XposedSecretProvider` and broadcasts `ACTION_COPY_SCREENSHOT` (with the screenshot URI and the secret) to the Cliptic app. The app validates the secret, caches the image, and writes it to the clipboard. It then sends `ACTION_COPY_SCREENSHOT_ACK` back; `CopyAckReceiver` in SystemUI validates the ACK secret and silently trashes the original.
 
 `MarkupCopyInjector` hooks the Pixel Markup editor (`com.google.android.markup` → `AnnotateActivity`) and adds a Copy button that invokes the editor's built-in clipboard-export path, suppressing the trailing `finishAndRemoveTask()` so the editor stays open.
+
+<p align="center">
+  <img src="res/lsposed1.png" width="560" alt="Copy chip in the screenshot shelf toolbar"/>
+  &nbsp;&nbsp;
+  <img src="res/lsposed2.png" width="200" alt="Copy button in the Markup editor"/>
+</p>
 
 ### Original-screenshot cleanup
 
