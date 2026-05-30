@@ -2,6 +2,8 @@
 
 Cliptic (`clip + automatic`) is an Android app that copies screenshots to the clipboard the moment they are taken — paste them anywhere without opening the gallery first.
 
+**[Download latest release →](https://github.com/yniyniyni/Cliptic/releases/latest)**
+
 ## Features
 
 **Standalone (no root required)**

@@ -51,6 +51,9 @@ signing.properties
 secrets.properties
 google-services.json
 
+# Module release output directories (APK + output-metadata.json)
+*/release/
+
 # Keep required wrapper and vendored dependency artifacts trackable.
 !gradle/wrapper/gradle-wrapper.jar
 !xposed/libs/*.aar
