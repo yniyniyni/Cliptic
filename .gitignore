@@ -11,6 +11,7 @@ local.properties
 
 # Android Studio and IntelliJ local state
 *.iml
+.idea
 .idea/caches/
 .idea/libraries/
 .idea/modules.xml
