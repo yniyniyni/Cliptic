@@ -68,7 +68,7 @@ The Xposed module runs inside `com.android.systemui`; clipboard writes happen in
 
 After a successful copy the app sends `ACTION_COPY_SCREENSHOT_ACK` back; `CopyAckReceiver` (in the SystemUI process) validates the secret and silently trashes the original via `MediaStore.MediaColumns.IS_TRASHED = 1`.
 
-All SystemUI hook code must stay defensive: wrap reflection in `runCatching`, log failures, fail closed, and never let a hook exception crash `com.android.systemui`. Use modern libxposed API 100 only — metadata lives in `xposed/src/main/resources/META-INF/xposed/` (`module.prop`, `java_init.list`, `scope.list`); the API jar is vendored at `xposed/libs/libxposed-api-100.jar` and referenced via `compileOnly(files(...))`. Do **not** use legacy `de.robv.android.xposed` entrypoints or `assets/xposed_init`.
+All SystemUI hook code must stay defensive: wrap reflection in `runCatching`, log failures, fail closed, and never let a hook exception crash `com.android.systemui`. Use modern libxposed API 101 only — metadata lives in `xposed/src/main/resources/META-INF/xposed/` (`module.prop`, `java_init.list`, `scope.list`); the API comes from the official Maven artifact `compileOnly("io.github.libxposed:api:101.0.1")`. The hook model is `module.hook(executable).intercept(Hooker)` where `Hooker.intercept(Chain)` wraps `chain.proceed()` (no static `before`/`after`). Do **not** use legacy `de.robv.android.xposed` entrypoints or `assets/xposed_init`.
 
 ## Settings
 

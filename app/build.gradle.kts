@@ -13,7 +13,7 @@ android {
         applicationId = "art.yniyniyni.cliptic"
         minSdk = 34
         targetSdk = 36
-        versionCode = 300520262
+        versionCode = 1004
         versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

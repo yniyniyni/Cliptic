@@ -9,7 +9,6 @@ import art.yniyniyni.cliptic.xposed.AppProtocol
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationHandler
-import java.lang.reflect.Member
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.lang.reflect.Proxy
@@ -109,7 +108,7 @@ object CopyButtonInjector {
                 if (hooks >= MAX_HOOKS) break
                 if (!predicate(method)) continue
                 val ok = runCatching {
-                    module.hook(method, CopyHooker::class.java)
+                    module.hook(method).intercept(CopyHooker())
                     true
                 }.onFailure {
                     log("copy hook ${clazz.simpleName}#${method.name} failed: ${it.javaClass.simpleName}")
@@ -127,7 +126,7 @@ object CopyButtonInjector {
     ): Int = runCatching {
         val binder = Class.forName(SHELF_BINDER_CLASS, false, classLoader)
         val method = binder.declaredMethods.first { it.name == "access\$updateActions" }
-        module.hook(method, UpdateActionsHooker::class.java)
+        module.hook(method).intercept(UpdateActionsHooker())
         log("hooked $SHELF_BINDER_CLASS#access\$updateActions for model injection")
         1
     }.onFailure { log("hook updateActions failed: ${it.javaClass.simpleName}: ${it.message}") }
@@ -253,20 +252,20 @@ object CopyButtonInjector {
         (value * context.resources.displayMetrics.density).toInt()
 
     class CopyHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun after(callback: XposedInterface.AfterHookCallback) {
-                runCatching { onHookedCall(callback.args, callback.result) }
-            }
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            runCatching { onHookedCall(chain.args.toTypedArray(), result) }
+            return result
         }
     }
 
     class UpdateActionsHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun before(callback: XposedInterface.BeforeHookCallback) {
-                runCatching { onUpdateActionsBefore(callback.args) }
-            }
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            // Snapshot the args, replace arg[1] with the Copy-prepended action list, and forward
+            // the modified snapshot to proceed() so the framework renders our chip like the natives.
+            val args = chain.args.toTypedArray()
+            runCatching { onUpdateActionsBefore(args) }
+            return chain.proceed(args)
         }
     }
 

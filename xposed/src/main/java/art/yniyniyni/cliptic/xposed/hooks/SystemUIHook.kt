@@ -26,7 +26,7 @@ object SystemUIHook {
         logSink = log
         runCatching {
             val attach = Application::class.java.getDeclaredMethod("attach", Context::class.java)
-            module.hook(attach, ApplicationAttachHooker::class.java)
+            module.hook(attach).intercept(ApplicationAttachHooker())
             log("Application.attach hook installed for SystemUI context capture")
         }.onFailure { throwable ->
             log("Application.attach hook failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
@@ -76,12 +76,11 @@ object SystemUIHook {
     }
 
     class ApplicationAttachHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun before(callback: XposedInterface.BeforeHookCallback) {
-                val context = callback.args.firstOrNull() as? Context ?: return
-                onApplicationAttach(context)
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            runCatching {
+                (chain.args.firstOrNull() as? Context)?.let { onApplicationAttach(it) }
             }
+            return chain.proceed()
         }
     }
 

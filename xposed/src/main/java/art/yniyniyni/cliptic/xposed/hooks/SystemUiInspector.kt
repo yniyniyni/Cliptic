@@ -123,7 +123,7 @@ object SystemUiInspector {
                 if (hooks >= MAX_HOOKS) break
                 if (!isInteresting(method)) continue
                 val hooked = runCatching {
-                    module.hook(method, DiagHooker::class.java)
+                    module.hook(method).intercept(DiagHooker())
                     true
                 }.onFailure {
                     log("hook ${clazz.simpleName}#${method.name} failed: ${it.javaClass.simpleName}: ${it.message}")
@@ -216,13 +216,12 @@ object SystemUiInspector {
     }
 
     class DiagHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun after(callback: XposedInterface.AfterHookCallback) {
-                runCatching {
-                    onHookedCall(callback.member, callback.thisObject, callback.args, callback.result)
-                }
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            runCatching {
+                onHookedCall(chain.executable, chain.thisObject, chain.args.toTypedArray(), result)
             }
+            return result
         }
     }
 

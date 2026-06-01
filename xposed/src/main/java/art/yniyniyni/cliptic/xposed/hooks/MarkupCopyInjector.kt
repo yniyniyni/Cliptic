@@ -54,10 +54,10 @@ object MarkupCopyInjector {
                 .apply { isAccessible = true }
 
             val onCreate = annotate.getDeclaredMethod("onCreate", Bundle::class.java)
-            module.hook(onCreate, InjectHooker::class.java)
+            module.hook(onCreate).intercept(InjectHooker())
 
             val finish = Activity::class.java.getDeclaredMethod("finishAndRemoveTask")
-            module.hook(finish, SuppressFinishHooker::class.java)
+            module.hook(finish).intercept(SuppressFinishHooker())
 
             log("markup copy injector ready: export=${exportMethod != null}")
         }.onFailure { log("markup copy injector install failed: ${it.javaClass.simpleName}: ${it.message}") }
@@ -138,35 +138,38 @@ object MarkupCopyInjector {
         }
     }
 
-    private fun onFinishAndRemoveTask(callback: XposedInterface.BeforeHookCallback) {
-        if (suppressFinishUntilMs == 0L) return
+    /**
+     * Returns true if the pending one-shot suppression window is active (and consumes it), meaning
+     * the current finishAndRemoveTask should be skipped to keep the editor open after a Copy.
+     */
+    private fun shouldSuppressFinish(): Boolean {
+        if (suppressFinishUntilMs == 0L) return false
         if (SystemClock.uptimeMillis() > suppressFinishUntilMs) {
             suppressFinishUntilMs = 0L
-            return
+            return false
         }
         suppressFinishUntilMs = 0L
-        runCatching { callback.returnAndSkip(null) }
         logSink?.invoke("markup copy: suppressed finishAndRemoveTask (editor kept open)")
+        return true
     }
 
     private fun dp(context: Context, value: Float): Int =
         (value * context.resources.displayMetrics.density).toInt()
 
     class InjectHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun after(callback: XposedInterface.AfterHookCallback) {
-                runCatching { (callback.thisObject as? Activity)?.let { injectButton(it) } }
-            }
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val result = chain.proceed()
+            runCatching { (chain.thisObject as? Activity)?.let { injectButton(it) } }
+            return result
         }
     }
 
     class SuppressFinishHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun before(callback: XposedInterface.BeforeHookCallback) {
-                runCatching { onFinishAndRemoveTask(callback) }
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            if (runCatching { shouldSuppressFinish() }.getOrDefault(false)) {
+                return null // skip the real finishAndRemoveTask (void); editor stays open
             }
+            return chain.proceed()
         }
     }
 
