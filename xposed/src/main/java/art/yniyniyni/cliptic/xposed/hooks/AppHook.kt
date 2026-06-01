@@ -16,7 +16,7 @@ object AppHook {
         runCatching {
             val bridge = classLoader.loadClass(BRIDGE_CLASS)
             val isActive = bridge.getDeclaredMethod("isModuleActive")
-            module.hook(isActive, ModuleActiveHooker::class.java)
+            module.hook(isActive).intercept(ModuleActiveHooker())
             log("XposedBridge.isModuleActive hook installed")
         }.onFailure { throwable ->
             log("XposedBridge.isModuleActive hook failed: ${throwable.javaClass.simpleName}: ${throwable.message}")
@@ -24,11 +24,7 @@ object AppHook {
     }
 
     class ModuleActiveHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            fun before(callback: XposedInterface.BeforeHookCallback) {
-                runCatching { callback.returnAndSkip(true) }
-            }
-        }
+        // isModuleActive() normally returns false; force true by returning without calling proceed().
+        override fun intercept(chain: XposedInterface.Chain): Any = true
     }
 }

@@ -12,8 +12,8 @@ android {
         applicationId = "art.yniyniyni.cliptic.xposed"
         minSdk = 34
         targetSdk = 36
-        versionCode = 30052026
-        versionName = "1.0.1"
+        versionCode = 31052026
+        versionName = "1.0.2"
         signingConfig = signingConfigs.getByName("debug")
     }
 
@@ -27,5 +27,5 @@ android {
 }
 
 dependencies {
-    compileOnly(files("libs/libxposed-api-100.jar"))
+    compileOnly("io.github.libxposed:api:101.0.1")
 }
