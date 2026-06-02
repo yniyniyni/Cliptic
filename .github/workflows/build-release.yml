@@ -1,0 +1,72 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure tags are available
+        run: git fetch --tags --force
+
+      - name: Read app versionName
+        id: version
+        run: |
+          version="$(grep -oE 'versionName *= *"[^"]+"' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+          if [ -z "$version" ]; then
+            echo "Could not parse versionName from app/build.gradle.kts" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Resolved app versionName: $version"
+
+      - name: Check whether release tag already exists
+        id: guard
+        run: |
+          if [ -n "$(git tag -l '${{ steps.version.outputs.version }}')" ]; then
+            echo "Tag ${{ steps.version.outputs.version }} already exists; skipping release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK 17
+        if: steps.guard.outputs.exists == 'false'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Build release APKs
+        if: steps.guard.outputs.exists == 'false'
+        run: ./gradlew :app:assembleRelease :xposed:assembleRelease
+
+      - name: Create GitHub Release
+        if: steps.guard.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          gh release create "$version" \
+            --target "${{ github.sha }}" \
+            --title "v$version" \
+            --generate-notes \
+            --notes "APKs are signed with the debug key (suitable for sideloading, not Play Store upload)." \
+            app/build/outputs/apk/release/app-release.apk \
+            xposed/build/outputs/apk/release/xposed-release.apk
