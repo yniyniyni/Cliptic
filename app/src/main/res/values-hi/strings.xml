@@ -102,4 +102,5 @@
     <string name="language_picker_title">ऐप भाषा</string>
     <string name="setting_app_language_summary">Cliptic जिस भाषा का उपयोग करता है उसे चुनें।</string>
     <string name="language_system_default">सिस्टम डिफ़ॉल्ट</string>
+    <string name="tile_no_screenshot">कोई हाल का स्क्रीनशॉट नहीं</string>
 </resources>

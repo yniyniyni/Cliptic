@@ -106,4 +106,5 @@
     <string name="language_picker_title">لغة التطبيق</string>
     <string name="setting_app_language_summary">اختر اللغة التي يستخدمها Cliptic.</string>
     <string name="language_system_default">إعداد النظام الافتراضي</string>
+    <string name="tile_no_screenshot">لا توجد لقطة شاشة حديثة</string>
 </resources>

@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Cliptic</string>
 
+    <!-- Tile -->
+    <string name="tile_no_screenshot">No recent screenshot</string>
+
     <!-- Service / notifications -->
     <string name="screenshot_copied">Screenshot copied</string>
     <string name="service_channel_name">Screenshot monitor</string>

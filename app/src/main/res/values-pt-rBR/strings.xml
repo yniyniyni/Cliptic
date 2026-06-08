@@ -103,4 +103,5 @@
     <string name="language_picker_title">Idioma do app</string>
     <string name="setting_app_language_summary">Escolha o idioma que o Cliptic usa.</string>
     <string name="language_system_default">Padrão do sistema</string>
+    <string name="tile_no_screenshot">Nenhuma captura recente</string>
 </resources>

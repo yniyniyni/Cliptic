@@ -101,4 +101,5 @@
     <string name="language_picker_title">アプリの言語</string>
     <string name="setting_app_language_summary">Cliptic が使用する言語を選択します。</string>
     <string name="language_system_default">システムのデフォルト</string>
+    <string name="tile_no_screenshot">最近のスクリーンショットはありません</string>
 </resources>
