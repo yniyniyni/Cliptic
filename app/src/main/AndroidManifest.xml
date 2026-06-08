@@ -91,19 +91,6 @@
             </intent-filter>
         </receiver>
 
-        <receiver
-            android:name=".receiver.CopyBroadcastReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="${applicationId}.ACTION_COPY_SCREENSHOT" />
-            </intent-filter>
-        </receiver>
-
-        <provider
-            android:name=".ipc.XposedSecretProvider"
-            android:authorities="${applicationId}.secrets"
-            android:exported="true" />
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

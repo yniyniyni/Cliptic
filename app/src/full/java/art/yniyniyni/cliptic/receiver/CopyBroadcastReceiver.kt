@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import art.yniyniyni.cliptic.AppActions
+import art.yniyniyni.cliptic.IpcActions
 import art.yniyniyni.cliptic.R
 import art.yniyniyni.cliptic.core.clipboard.ClipboardWriter
 import art.yniyniyni.cliptic.core.screenshot.ScreenshotFileManager
@@ -15,9 +16,9 @@ import art.yniyniyni.cliptic.settings.ClipticSettings
 
 class CopyBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != AppActions.ACTION_COPY_SCREENSHOT) return
+        if (intent.action != IpcActions.ACTION_COPY_SCREENSHOT) return
         val sourceUri = intent.getStringExtra(AppActions.EXTRA_SCREENSHOT_URI)?.let(Uri::parse) ?: return
-        val secret = intent.getStringExtra(AppActions.EXTRA_SECRET) ?: return
+        val secret = intent.getStringExtra(IpcActions.EXTRA_SECRET) ?: return
         if (secret != ClipticSettings.xposedSecret(context)) return
 
         val pendingResult = goAsync()
@@ -49,10 +50,10 @@ class CopyBroadcastReceiver : BroadcastReceiver() {
     }
 
     private fun sendCopyAck(context: Context, originalUri: Uri, secret: String) {
-        val ack = Intent(AppActions.ACTION_COPY_SCREENSHOT_ACK)
-            .setPackage(AppActions.SYSTEMUI_PACKAGE)
+        val ack = Intent(IpcActions.ACTION_COPY_SCREENSHOT_ACK)
+            .setPackage(IpcActions.SYSTEMUI_PACKAGE)
             .putExtra(AppActions.EXTRA_SCREENSHOT_URI, originalUri.toString())
-            .putExtra(AppActions.EXTRA_SECRET, secret)
+            .putExtra(IpcActions.EXTRA_SECRET, secret)
         context.sendBroadcast(ack)
     }
 }
