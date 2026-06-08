@@ -18,6 +18,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import art.yniyniyni.cliptic.AppActions
+import art.yniyniyni.cliptic.BuildConfig
 import art.yniyniyni.cliptic.R
 import art.yniyniyni.cliptic.settings.ClipticSettings
 import java.util.concurrent.TimeUnit
@@ -96,6 +97,10 @@ object OriginalScreenshotCleanup {
     }
 
     fun canTrashSilently(context: Context): Boolean {
+        // When SILENT_TRASH_ALLOWED is off (Play fallback if MANAGE_MEDIA is rejected),
+        // never use the silent path — route every removal through the user-confirmed
+        // createTrashRequest dialog instead.
+        if (!BuildConfig.SILENT_TRASH_ALLOWED) return false
         return runCatching { MediaStore.canManageMedia(context) }.getOrDefault(false)
     }
 
