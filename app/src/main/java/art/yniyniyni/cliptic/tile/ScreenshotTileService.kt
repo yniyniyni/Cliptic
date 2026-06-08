@@ -11,6 +11,7 @@ import art.yniyniyni.cliptic.core.clipboard.ClipboardWriter
 import art.yniyniyni.cliptic.core.screenshot.LatestScreenshotLocator
 import art.yniyniyni.cliptic.core.screenshot.ScreenshotFileManager
 import art.yniyniyni.cliptic.settings.ClipticSettings
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * One-tap action tile: copy the most recent screenshot to the clipboard and, when
@@ -18,6 +19,8 @@ import art.yniyniyni.cliptic.settings.ClipticSettings
  * lives in the in-app settings, not here.
  */
 class ScreenshotTileService : TileService() {
+
+    private val copyInProgress = AtomicBoolean(false)
 
     override fun onStartListening() {
         super.onStartListening()
@@ -38,12 +41,16 @@ class ScreenshotTileService : TileService() {
     }
 
     private fun copyLatestScreenshot() {
+        if (!copyInProgress.compareAndSet(false, true)) return
         val appContext = applicationContext
         val main = Handler(Looper.getMainLooper())
         Thread {
             val sourceUri = LatestScreenshotLocator(appContext).latest()
             if (sourceUri == null) {
-                main.post { toast(R.string.tile_no_screenshot) }
+                main.post {
+                    toast(R.string.tile_no_screenshot)
+                    copyInProgress.set(false)
+                }
                 return@Thread
             }
             val fileManager = ScreenshotFileManager(appContext)
@@ -53,16 +60,20 @@ class ScreenshotTileService : TileService() {
                     .getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true) &&
                     OriginalScreenshotCleanup.isLikelyScreenshotOriginal(appContext, sourceUri)
             main.post {
-                if (cachedUri == null) {
-                    toast(R.string.tile_no_screenshot)
-                    return@post
-                }
-                ClipboardWriter.copyUriToClipboard(appContext, cachedUri)
-                ClipticSettings.recordCopy(appContext)
-                toast(R.string.screenshot_copied)
-                fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(appContext))
-                if (shouldRemoveOriginal) {
-                    OriginalScreenshotCleanup.requestTrashPrompt(appContext, sourceUri)
+                try {
+                    if (cachedUri == null) {
+                        toast(R.string.tile_no_screenshot)
+                        return@post
+                    }
+                    ClipboardWriter.copyUriToClipboard(appContext, cachedUri)
+                    ClipticSettings.recordCopy(appContext)
+                    toast(R.string.screenshot_copied)
+                    fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(appContext))
+                    if (shouldRemoveOriginal) {
+                        OriginalScreenshotCleanup.requestTrashPrompt(appContext, sourceUri)
+                    }
+                } finally {
+                    copyInProgress.set(false)
                 }
             }
         }.start()
