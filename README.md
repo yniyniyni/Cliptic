@@ -110,3 +110,7 @@ IPC constants are mirrored in `AppActions.kt` (app side) and `AppProtocol.kt` (x
 ## License
 
 See [LICENSE](LICENSE).
+
+## Privacy Policy
+
+See [Privacy Policy](PRIVACY_POLICY.md).
