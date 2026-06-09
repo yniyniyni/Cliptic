@@ -28,10 +28,14 @@
             android:noHistory="true"
             android:theme="@style/Theme.Cliptic.NoDisplay" />
 
+        <!-- Empty taskAffinity keeps the transparent trash-prompt host in its own task so
+             FLAG_ACTIVITY_NEW_TASK never merges into (and surfaces) MainActivity's task.
+             The system trash dialog then overlays whatever the user was on, not Cliptic. -->
         <activity
             android:name=".cleanup.RemoveOriginalActivity"
             android:excludeFromRecents="true"
             android:exported="false"
+            android:taskAffinity=""
             android:theme="@style/Theme.Cliptic.Transparent" />
 
         <activity-alias

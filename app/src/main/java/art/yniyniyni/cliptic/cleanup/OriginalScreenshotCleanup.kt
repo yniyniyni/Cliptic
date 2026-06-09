@@ -176,7 +176,7 @@ object OriginalScreenshotCleanup {
             .setAction(AppActions.ACTION_TRASH_ORIGINAL)
             .putExtra(AppActions.EXTRA_SCREENSHOT_URI, originalUri.toString())
             .putExtra(AppActions.EXTRA_REQUEST_ID, originalUri.toString())
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
     }
 
     private fun showFallbackNotification(context: Context, originalUri: Uri, pendingCount: Int) {
