@@ -18,6 +18,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import art.yniyniyni.cliptic.AppActions
+import art.yniyniyni.cliptic.BuildConfig
 import art.yniyniyni.cliptic.R
 import art.yniyniyni.cliptic.settings.ClipticSettings
 import java.util.concurrent.TimeUnit
@@ -43,6 +44,23 @@ object OriginalScreenshotCleanup {
         } else {
             showPendingFallbackNotification(appContext)
         }
+    }
+
+    /**
+     * Registers the original as pending and, when silent trashing is unavailable,
+     * returns the user-facing trash-prompt Intent for the caller to launch from its
+     * foreground context. Returns null when the silent MANAGE_MEDIA path took over.
+     */
+    fun immediateTrashPromptIntent(context: Context, originalUri: Uri): Intent? {
+        val appContext = context.applicationContext
+        addPending(appContext, originalUri)
+        if (canTrashSilently(appContext)) {
+            showCleanupInProgress(appContext)
+            scheduleFastTrashRetries(appContext, originalUri)
+            enqueuePendingTrashWork(appContext)
+            return null
+        }
+        return promptIntent(appContext, originalUri)
     }
 
     fun launchPendingPrompt(context: Context) {
@@ -96,6 +114,10 @@ object OriginalScreenshotCleanup {
     }
 
     fun canTrashSilently(context: Context): Boolean {
+        // When SILENT_TRASH_ALLOWED is off (Play fallback if MANAGE_MEDIA is rejected),
+        // never use the silent path — route every removal through the user-confirmed
+        // createTrashRequest dialog instead.
+        if (!BuildConfig.SILENT_TRASH_ALLOWED) return false
         return runCatching { MediaStore.canManageMedia(context) }.getOrDefault(false)
     }
 
@@ -154,7 +176,7 @@ object OriginalScreenshotCleanup {
             .setAction(AppActions.ACTION_TRASH_ORIGINAL)
             .putExtra(AppActions.EXTRA_SCREENSHOT_URI, originalUri.toString())
             .putExtra(AppActions.EXTRA_REQUEST_ID, originalUri.toString())
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
     }
 
     private fun showFallbackNotification(context: Context, originalUri: Uri, pendingCount: Int) {

@@ -90,11 +90,6 @@
     <string name="settings_section_notification">Notification</string>
     <string name="setting_service_notification_title">Notification du service</string>
     <string name="setting_service_notification_summary">Ajustez la visibilité dans les paramètres Android. Elle ne peut pas être masquée tant que le service tourne.</string>
-    <string name="settings_section_lsposed">LSPosed</string>
-    <string name="lsposed_module_active">MODULE ACTIF</string>
-    <string name="copy_mode_auto">Auto uniquement</string>
-    <string name="copy_mode_xposed">LSPosed uniquement</string>
-    <string name="copy_mode_both">Les deux</string>
     <string name="settings_section_about">À propos</string>
     <string name="about_version">Version %1$s</string>
 
@@ -103,4 +98,5 @@
     <string name="language_picker_title">Langue de l\'application</string>
     <string name="setting_app_language_summary">Choisissez la langue utilisée par Cliptic.</string>
     <string name="language_system_default">Paramètre système par défaut</string>
+    <string name="tile_no_screenshot">Aucune capture récente</string>
 </resources>

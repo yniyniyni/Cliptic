@@ -88,11 +88,6 @@
     <string name="settings_section_notification">通知</string>
     <string name="setting_service_notification_title">服务通知</string>
     <string name="setting_service_notification_summary">在 Android 设置中调整可见性。服务运行时无法隐藏。</string>
-    <string name="settings_section_lsposed">LSPosed</string>
-    <string name="lsposed_module_active">模块已激活</string>
-    <string name="copy_mode_auto">仅自动</string>
-    <string name="copy_mode_xposed">仅 LSPosed</string>
-    <string name="copy_mode_both">两者</string>
     <string name="settings_section_about">关于</string>
     <string name="about_version">版本 %1$s</string>
 
@@ -101,4 +96,5 @@
     <string name="language_picker_title">应用语言</string>
     <string name="setting_app_language_summary">选择 Cliptic 使用的语言。</string>
     <string name="language_system_default">系统默认</string>
+    <string name="tile_no_screenshot">没有最近的截图</string>
 </resources>

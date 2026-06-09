@@ -1,4 +1,4 @@
-package art.yniyniyni.cliptic.core.util
+package art.yniyniyni.cliptic.ipc
 
 object XposedBridge {
     /**

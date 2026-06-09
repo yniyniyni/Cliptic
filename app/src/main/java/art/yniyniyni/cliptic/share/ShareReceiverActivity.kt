@@ -28,7 +28,10 @@ class ShareReceiverActivity : Activity() {
                         .getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true) &&
                     OriginalScreenshotCleanup.isLikelyScreenshotOriginal(this, streamUri)
                 ) {
-                    OriginalScreenshotCleanup.requestTrashPrompt(this, streamUri)
+                    val trashIntent = OriginalScreenshotCleanup.immediateTrashPromptIntent(this, streamUri)
+                    if (trashIntent != null) {
+                        startActivity(trashIntent)
+                    }
                 }
             }
         }

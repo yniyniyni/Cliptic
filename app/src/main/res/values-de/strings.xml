@@ -89,11 +89,6 @@
     <string name="settings_section_notification">Benachrichtigung</string>
     <string name="setting_service_notification_title">Dienstbenachrichtigung</string>
     <string name="setting_service_notification_summary">Passe die Sichtbarkeit in den Android-Einstellungen an. Sie kann nicht ausgeblendet werden, während der Dienst läuft.</string>
-    <string name="settings_section_lsposed">LSPosed</string>
-    <string name="lsposed_module_active">MODUL AKTIV</string>
-    <string name="copy_mode_auto">Nur Auto</string>
-    <string name="copy_mode_xposed">Nur LSPosed</string>
-    <string name="copy_mode_both">Beide</string>
     <string name="settings_section_about">Über</string>
     <string name="about_version">Version %1$s</string>
 
@@ -102,4 +97,5 @@
     <string name="language_picker_title">App-Sprache</string>
     <string name="setting_app_language_summary">Wähle die Sprache, die Cliptic verwendet.</string>
     <string name="language_system_default">Systemstandard</string>
+    <string name="tile_no_screenshot">Kein aktueller Screenshot</string>
 </resources>

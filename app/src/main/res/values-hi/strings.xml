@@ -89,11 +89,6 @@
     <string name="settings_section_notification">सूचना</string>
     <string name="setting_service_notification_title">सेवा सूचना</string>
     <string name="setting_service_notification_summary">Android सेटिंग में दृश्यता समायोजित करें। सेवा चलने के दौरान इसे छिपाया नहीं जा सकता।</string>
-    <string name="settings_section_lsposed">LSPosed</string>
-    <string name="lsposed_module_active">मॉड्यूल सक्रिय</string>
-    <string name="copy_mode_auto">केवल ऑटो</string>
-    <string name="copy_mode_xposed">केवल LSPosed</string>
-    <string name="copy_mode_both">दोनों</string>
     <string name="settings_section_about">परिचय</string>
     <string name="about_version">संस्करण %1$s</string>
 
@@ -102,4 +97,5 @@
     <string name="language_picker_title">ऐप भाषा</string>
     <string name="setting_app_language_summary">Cliptic जिस भाषा का उपयोग करता है उसे चुनें।</string>
     <string name="language_system_default">सिस्टम डिफ़ॉल्ट</string>
+    <string name="tile_no_screenshot">कोई हाल का स्क्रीनशॉट नहीं</string>
 </resources>

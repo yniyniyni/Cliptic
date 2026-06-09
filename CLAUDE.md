@@ -25,7 +25,7 @@ Use `rg` for searching the tree.
 
 Three Gradle modules, all under package root `art.yniyniyni.cliptic`:
 
-- **`:core`** — pure Android library, no Compose. Owns the reusable primitives: `ClipboardWriter` (writes a `content://` URI onto the clipboard), `ScreenshotDetector` (MediaStore `ContentObserver`), `ScreenshotFileManager` (cache + expiry), `util/XposedBridge` (active-module stub).
+- **`:core`** — pure Android library, no Compose. Owns the reusable primitives: `ClipboardWriter` (writes a `content://` URI onto the clipboard), `ScreenshotDetector` (MediaStore `ContentObserver`), `ScreenshotFileManager` (cache + expiry).
 - **`:app`** — the primary, fully-usable standalone APK (`art.yniyniyni.cliptic`). Compose/Material 3 UI, foreground service, receivers, QS tile, IPC provider, cleanup flow. Depends on `:core`.
 - **`:xposed`** — separate LSPosed module APK (`art.yniyniyni.cliptic.xposed`). Depends on `:core`. Targets Android 16 Pixel SystemUI. Contains four active hooks (see below) plus the retained `SystemUiInspector` discovery harness.
 
@@ -53,7 +53,7 @@ Hooks `Application.attach` in the `com.android.systemui` process to capture the 
 
 ### AppHook
 
-Hooks `XposedBridge.isModuleActive` → `true` in the app process so the UI shows "LSPosed active" and exposes the copy-mode picker.
+Hooks `XposedBridge.isModuleActive` → `true` in the app process so the UI shows "LSPosed active" and exposes the copy-mode picker. The stub lives in the app's full source set (`art.yniyniyni.cliptic.ipc.XposedBridge`). The play flavor contains no LSPosed UI or IPC secret.
 
 ### SystemUiInspector (retained, not invoked in production)
 

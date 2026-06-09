@@ -20,6 +20,24 @@ android {
         signingConfig = signingConfigs.getByName("debug")
     }
 
+    flavorDimensions += "dist"
+    productFlavors {
+        create("full") {
+            dimension = "dist"
+            isDefault = true
+            // Silent original-trash via MANAGE_MEDIA is allowed on the sideload build.
+            buildConfigField("boolean", "SILENT_TRASH_ALLOWED", "true")
+        }
+        create("play") {
+            dimension = "dist"
+            // Keep MANAGE_MEDIA silent-trash for the Play build by default. If Google
+            // rejects the MANAGE_MEDIA declaration, flip this to "false" and rebuild —
+            // OriginalScreenshotCleanup then routes everything through the
+            // user-confirmed createTrashRequest dialog instead.
+            buildConfigField("boolean", "SILENT_TRASH_ALLOWED", "true")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

@@ -5,12 +5,14 @@ import io.github.libxposed.api.XposedInterface
 /**
  * Hooks installed inside the Cliptic app process (`art.yniyniyni.cliptic`).
  *
- * The only job here is to flip [art.yniyniyni.cliptic.core.util.XposedBridge.isModuleActive] to
+ * The only job here is to flip [art.yniyniyni.cliptic.ipc.XposedBridge.isModuleActive] to
  * `true` so the standalone UI can reveal its LSPosed section. The method is a plain static
- * (`@JvmStatic` on a Kotlin `object`) that normally returns `false`.
+ * (`@JvmStatic` on a Kotlin `object`) that normally returns `false`. The stub lives in the
+ * app's full source set (`art.yniyniyni.cliptic.ipc.XposedBridge`); the play flavor contains
+ * no LSPosed UI or IPC secret.
  */
 object AppHook {
-    private const val BRIDGE_CLASS = "art.yniyniyni.cliptic.core.util.XposedBridge"
+    private const val BRIDGE_CLASS = "art.yniyniyni.cliptic.ipc.XposedBridge"
 
     fun install(module: XposedInterface, classLoader: ClassLoader, log: (String) -> Unit) {
         runCatching {

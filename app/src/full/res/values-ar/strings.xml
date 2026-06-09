@@ -1,0 +1,7 @@
+<resources>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">الوحدة نشطة</string>
+    <string name="copy_mode_auto">تلقائي فقط</string>
+    <string name="copy_mode_xposed">LSPosed فقط</string>
+    <string name="copy_mode_both">كلاهما</string>
+</resources>
