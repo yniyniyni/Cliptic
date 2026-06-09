@@ -12,8 +12,8 @@ android {
         applicationId = "art.yniyniyni.cliptic.xposed"
         minSdk = 34
         targetSdk = 36
-        versionCode = 1002
-        versionName = "1.0.2"
+        versionCode = 1003
+        versionName = "1.0.3"
         signingConfig = signingConfigs.getByName("debug")
     }
 
