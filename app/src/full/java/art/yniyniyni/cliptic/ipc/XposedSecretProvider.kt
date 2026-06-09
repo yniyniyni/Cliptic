@@ -7,8 +7,6 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Binder
 import android.os.Process
-import art.yniyniyni.cliptic.settings.ClipticSettings
-
 class XposedSecretProvider : ContentProvider() {
     override fun onCreate(): Boolean = true
 
@@ -22,7 +20,7 @@ class XposedSecretProvider : ContentProvider() {
         val context = context ?: return null
         if (!isAuthorizedCaller()) return null
         return MatrixCursor(arrayOf(COLUMN_SECRET)).apply {
-            addRow(arrayOf(ClipticSettings.xposedSecret(context)))
+            addRow(arrayOf(XposedSecret.get(context)))
         }
     }
 

@@ -13,9 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -29,8 +27,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -105,7 +101,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import art.yniyniyni.cliptic.cleanup.OriginalScreenshotCleanup
-import art.yniyniyni.cliptic.core.util.XposedBridge
 import art.yniyniyni.cliptic.permission.MediaAccess
 import art.yniyniyni.cliptic.permission.MediaAccessLevel
 import art.yniyniyni.cliptic.service.ScreenshotService
@@ -143,7 +138,6 @@ private fun ClipticApp() {
     var mediaManagementGranted by remember { mutableStateOf(OriginalScreenshotCleanup.canTrashSilently(context)) }
     var copyCountToday by remember { mutableIntStateOf(ClipticSettings.copyCountToday(context)) }
     var lastCopyAt by remember { mutableLongStateOf(ClipticSettings.lastCopyAt(context)) }
-    val xposedActive = remember { XposedBridge.isModuleActive() }
     var onboardingVisible by remember { mutableStateOf(!prefs.getBoolean(ClipticSettings.KEY_ONBOARDING_DONE, false)) }
 
     val permissionRequest = remember { MediaAccess.requestPermissions + Manifest.permission.POST_NOTIFICATIONS }
@@ -300,7 +294,6 @@ private fun ClipticApp() {
                         startOnBoot = startOnBoot,
                         mediaManagementGranted = mediaManagementGranted,
                         pendingOriginalCount = pendingOriginalCount,
-                        xposedActive = xposedActive,
                         copyMode = copyMode,
                         onStartOnBootChange = {
                             startOnBoot = it
@@ -412,7 +405,6 @@ private fun SettingsScreen(
     startOnBoot: Boolean,
     mediaManagementGranted: Boolean,
     pendingOriginalCount: Int,
-    xposedActive: Boolean,
     copyMode: String,
     onStartOnBootChange: (Boolean) -> Unit,
     onOpenMediaSettings: () -> Unit,
@@ -499,35 +491,7 @@ private fun SettingsScreen(
             ) { PillButton(label = stringResource(R.string.action_open), onClick = onOpenNotificationSettings, outlined = true) }
         }
 
-        if (xposedActive) {
-            SectionLabel(stringResource(R.string.settings_section_lsposed))
-            GlassCard {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = colorScheme.primaryContainer.copy(alpha = 0.55f),
-                    border = BorderStroke(1.dp, colorScheme.outlineVariant)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(colorScheme.primary)
-                        )
-                        Text(
-                            text = stringResource(R.string.lsposed_module_active),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colorScheme.primary
-                        )
-                    }
-                }
-                CopyModePicker(copyMode = copyMode, onCopyModeChange = onCopyModeChange)
-            }
-        }
+        ModuleStatusSection(copyMode = copyMode, onCopyModeChange = onCopyModeChange)
 
         SectionLabel(stringResource(R.string.settings_section_about))
         GlassCard {
@@ -907,7 +871,7 @@ private fun PendingOriginalsBanner(count: Int, onRemove: () -> Unit) {
 // ── Shared components ─────────────────────────────────────────────────────────
 
 @Composable
-private fun GlassCard(
+internal fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -945,7 +909,7 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SectionLabel(title: String) {
+internal fun SectionLabel(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleSmall,
@@ -1163,81 +1127,6 @@ private fun openServiceNotificationSettings(context: android.content.Context) {
             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching { context.startActivity(fallback) }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CopyModePicker(
-    copyMode: String,
-    onCopyModeChange: (String) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            CopyModeChip(stringResource(R.string.copy_mode_auto), ClipticSettings.COPY_MODE_AUTO, copyMode, onCopyModeChange)
-            CopyModeChip(stringResource(R.string.copy_mode_xposed), ClipticSettings.COPY_MODE_XPOSED, copyMode, onCopyModeChange)
-            CopyModeChip(stringResource(R.string.copy_mode_both), ClipticSettings.COPY_MODE_BOTH, copyMode, onCopyModeChange)
-        }
-    }
-}
-
-/** A selectable pill chip with a radio dot — tints + cross-fades its colors when chosen. */
-@Composable
-private fun CopyModeChip(
-    label: String,
-    value: String,
-    selected: String,
-    onCopyModeChange: (String) -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val isSelected = selected == value
-    val background by animateColorAsState(
-        if (isSelected) colorScheme.primaryContainer.copy(alpha = 0.7f) else colorScheme.surface.copy(alpha = 0.4f),
-        label = "chipBackground"
-    )
-    val borderColor by animateColorAsState(
-        if (isSelected) colorScheme.primary.copy(alpha = 0.55f) else colorScheme.outlineVariant.copy(alpha = 0.45f),
-        label = "chipBorder"
-    )
-    val contentColor by animateColorAsState(
-        if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant,
-        label = "chipContent"
-    )
-    Surface(
-        onClick = { onCopyModeChange(value) },
-        shape = RoundedCornerShape(50),
-        color = background,
-        border = BorderStroke(1.dp, borderColor),
-        shadowElevation = 0.dp,
-        tonalElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(start = 10.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val dotScale by animateFloatAsState(if (isSelected) 1f else 0f, label = "chipDot")
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, if (isSelected) colorScheme.primary else colorScheme.outline, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(7.dp)
-                        .scale(dotScale)
-                        .clip(CircleShape)
-                        .background(colorScheme.primary)
-                )
-            }
-            Text(label, style = MaterialTheme.typography.titleSmall, color = contentColor)
-        }
     }
 }
 

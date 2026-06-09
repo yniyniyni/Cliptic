@@ -92,11 +92,6 @@
     <string name="settings_section_notification">Notification</string>
     <string name="setting_service_notification_title">Service notification</string>
     <string name="setting_service_notification_summary">Adjust visibility in Android settings. It can\'t be hidden while the service runs.</string>
-    <string name="settings_section_lsposed">LSPosed</string>
-    <string name="lsposed_module_active">MODULE ACTIVE</string>
-    <string name="copy_mode_auto">Auto only</string>
-    <string name="copy_mode_xposed">LSPosed only</string>
-    <string name="copy_mode_both">Both</string>
     <string name="settings_section_about">About</string>
     <string name="about_version">Version %1$s</string>
 

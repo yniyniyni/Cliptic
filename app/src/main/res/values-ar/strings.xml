@@ -93,11 +93,6 @@
     <string name="settings_section_notification">الإشعار</string>
     <string name="setting_service_notification_title">إشعار الخدمة</string>
     <string name="setting_service_notification_summary">اضبط الظهور في إعدادات Android. لا يمكن إخفاؤه أثناء تشغيل الخدمة.</string>
-    <string name="settings_section_lsposed">LSPosed</string>
-    <string name="lsposed_module_active">الوحدة نشطة</string>
-    <string name="copy_mode_auto">تلقائي فقط</string>
-    <string name="copy_mode_xposed">LSPosed فقط</string>
-    <string name="copy_mode_both">كلاهما</string>
     <string name="settings_section_about">حول</string>
     <string name="about_version">الإصدار %1$s</string>
 

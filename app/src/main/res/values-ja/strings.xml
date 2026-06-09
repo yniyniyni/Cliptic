@@ -88,11 +88,6 @@
     <string name="settings_section_notification">通知</string>
     <string name="setting_service_notification_title">サービス通知</string>
     <string name="setting_service_notification_summary">Android の設定で表示を調整できます。サービスの稼働中は非表示にできません。</string>
-    <string name="settings_section_lsposed">LSPosed</string>
-    <string name="lsposed_module_active">モジュール有効</string>
-    <string name="copy_mode_auto">自動のみ</string>
-    <string name="copy_mode_xposed">LSPosed のみ</string>
-    <string name="copy_mode_both">両方</string>
     <string name="settings_section_about">情報</string>
     <string name="about_version">バージョン %1$s</string>
 

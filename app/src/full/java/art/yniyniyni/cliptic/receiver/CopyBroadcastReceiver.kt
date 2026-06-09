@@ -12,6 +12,7 @@ import art.yniyniyni.cliptic.IpcActions
 import art.yniyniyni.cliptic.R
 import art.yniyniyni.cliptic.core.clipboard.ClipboardWriter
 import art.yniyniyni.cliptic.core.screenshot.ScreenshotFileManager
+import art.yniyniyni.cliptic.ipc.XposedSecret
 import art.yniyniyni.cliptic.settings.ClipticSettings
 
 class CopyBroadcastReceiver : BroadcastReceiver() {
@@ -19,7 +20,7 @@ class CopyBroadcastReceiver : BroadcastReceiver() {
         if (intent.action != IpcActions.ACTION_COPY_SCREENSHOT) return
         val sourceUri = intent.getStringExtra(AppActions.EXTRA_SCREENSHOT_URI)?.let(Uri::parse) ?: return
         val secret = intent.getStringExtra(IpcActions.EXTRA_SECRET) ?: return
-        if (secret != ClipticSettings.xposedSecret(context)) return
+        if (secret != XposedSecret.get(context)) return
 
         val pendingResult = goAsync()
         Thread {

@@ -1,0 +1,7 @@
+<resources>
+    <string name="settings_section_lsposed">LSPosed</string>
+    <string name="lsposed_module_active">MODULE ACTIVE</string>
+    <string name="copy_mode_auto">Auto only</string>
+    <string name="copy_mode_xposed">LSPosed only</string>
+    <string name="copy_mode_both">Both</string>
+</resources>

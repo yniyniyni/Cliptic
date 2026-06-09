@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import art.yniyniyni.cliptic.service.ScreenshotService
 import java.time.LocalDate
-import java.util.UUID
 
 object ClipticSettings {
     const val KEY_AUTO_COPY_ENABLED = "auto_copy_enabled"
@@ -16,7 +15,7 @@ object ClipticSettings {
     const val KEY_START_ON_BOOT = "start_on_boot"
     const val KEY_REMOVE_ORIGINAL_AFTER_COPY = "remove_original_after_copy"
     const val KEY_COPY_MODE = "copy_mode"
-    const val KEY_XPOSED_SECRET = "xposed_secret"
+    const val KEY_DEFAULTS_INITIALIZED = "defaults_initialized"
     const val KEY_CACHE_DURATION_MS = "cache_duration_ms"
     const val KEY_ONBOARDING_DONE = "onboarding_done"
     const val KEY_PENDING_ORIGINAL_URI = "pending_original_uri"
@@ -39,25 +38,18 @@ object ClipticSettings {
 
     fun ensureDefaults(context: Context) {
         val prefs = prefs(context)
-        if (!prefs.contains(KEY_XPOSED_SECRET)) {
+        if (!prefs.contains(KEY_DEFAULTS_INITIALIZED)) {
             prefs.edit()
                 .putBoolean(KEY_AUTO_COPY_ENABLED, prefs.getBoolean(KEY_AUTO_COPY_ENABLED, true))
                 .putBoolean(KEY_SHARE_SHEET_ENABLED, prefs.getBoolean(KEY_SHARE_SHEET_ENABLED, true))
                 .putBoolean(KEY_START_ON_BOOT, prefs.getBoolean(KEY_START_ON_BOOT, true))
                 .putBoolean(KEY_REMOVE_ORIGINAL_AFTER_COPY, prefs.getBoolean(KEY_REMOVE_ORIGINAL_AFTER_COPY, true))
                 .putString(KEY_COPY_MODE, prefs.getString(KEY_COPY_MODE, COPY_MODE_AUTO))
-                .putString(KEY_XPOSED_SECRET, UUID.randomUUID().toString())
+                .putBoolean(KEY_DEFAULTS_INITIALIZED, true)
                 .putLong(KEY_CACHE_DURATION_MS, DEFAULT_CACHE_DURATION_MS)
                 .apply()
         }
         setShareSheetEnabled(context, prefs.getBoolean(KEY_SHARE_SHEET_ENABLED, true))
-    }
-
-    fun xposedSecret(context: Context): String {
-        ensureDefaults(context)
-        return prefs(context).getString(KEY_XPOSED_SECRET, null) ?: UUID.randomUUID().toString().also {
-            prefs(context).edit().putString(KEY_XPOSED_SECRET, it).apply()
-        }
     }
 
     fun cacheDurationMs(context: Context): Long {
