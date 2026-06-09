@@ -40,7 +40,7 @@ object ClipticSettings {
         val prefs = prefs(context)
         if (!prefs.contains(KEY_DEFAULTS_INITIALIZED)) {
             prefs.edit()
-                .putBoolean(KEY_AUTO_COPY_ENABLED, prefs.getBoolean(KEY_AUTO_COPY_ENABLED, true))
+                .putBoolean(KEY_AUTO_COPY_ENABLED, prefs.getBoolean(KEY_AUTO_COPY_ENABLED, false))
                 .putBoolean(KEY_SHARE_SHEET_ENABLED, prefs.getBoolean(KEY_SHARE_SHEET_ENABLED, true))
                 .putBoolean(KEY_START_ON_BOOT, prefs.getBoolean(KEY_START_ON_BOOT, true))
                 .putBoolean(KEY_REMOVE_ORIGINAL_AFTER_COPY, prefs.getBoolean(KEY_REMOVE_ORIGINAL_AFTER_COPY, true))
@@ -85,7 +85,7 @@ object ClipticSettings {
     fun shouldRunScreenshotService(context: Context): Boolean {
         val prefs = prefs(context)
         val copyMode = prefs.getString(KEY_COPY_MODE, COPY_MODE_AUTO) ?: COPY_MODE_AUTO
-        return prefs.getBoolean(KEY_AUTO_COPY_ENABLED, true) && copyMode != COPY_MODE_XPOSED
+        return prefs.getBoolean(KEY_AUTO_COPY_ENABLED, false) && copyMode != COPY_MODE_XPOSED
     }
 
     fun startScreenshotService(context: Context) {

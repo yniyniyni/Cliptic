@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
 private fun ClipticApp() {
     val context = LocalContext.current
     val prefs = remember { ClipticSettings.prefs(context) }
-    var autoCopyEnabled by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_AUTO_COPY_ENABLED, true)) }
+    var autoCopyEnabled by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_AUTO_COPY_ENABLED, false)) }
     var shareSheetEnabled by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_SHARE_SHEET_ENABLED, true)) }
     var removeOriginalAfterCopy by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true)) }
     var startOnBoot by remember { mutableStateOf(prefs.getBoolean(ClipticSettings.KEY_START_ON_BOOT, true)) }
