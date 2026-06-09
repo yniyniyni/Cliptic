@@ -1,5 +1,6 @@
 package art.yniyniyni.cliptic.tile
 
+import android.app.PendingIntent
 import android.os.Handler
 import android.os.Looper
 import android.service.quicksettings.Tile
@@ -70,7 +71,17 @@ class ScreenshotTileService : TileService() {
                     toast(R.string.screenshot_copied)
                     fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(appContext))
                     if (shouldRemoveOriginal) {
-                        OriginalScreenshotCleanup.requestTrashPrompt(appContext, sourceUri)
+                        val trashIntent = OriginalScreenshotCleanup.immediateTrashPromptIntent(appContext, sourceUri)
+                        if (trashIntent != null) {
+                            startActivityAndCollapse(
+                                PendingIntent.getActivity(
+                                    appContext,
+                                    0,
+                                    trashIntent,
+                                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                                )
+                            )
+                        }
                     }
                 } finally {
                     copyInProgress.set(false)

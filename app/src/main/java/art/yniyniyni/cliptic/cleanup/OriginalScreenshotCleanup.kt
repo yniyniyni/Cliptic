@@ -46,6 +46,23 @@ object OriginalScreenshotCleanup {
         }
     }
 
+    /**
+     * Registers the original as pending and, when silent trashing is unavailable,
+     * returns the user-facing trash-prompt Intent for the caller to launch from its
+     * foreground context. Returns null when the silent MANAGE_MEDIA path took over.
+     */
+    fun immediateTrashPromptIntent(context: Context, originalUri: Uri): Intent? {
+        val appContext = context.applicationContext
+        addPending(appContext, originalUri)
+        if (canTrashSilently(appContext)) {
+            showCleanupInProgress(appContext)
+            scheduleFastTrashRetries(appContext, originalUri)
+            enqueuePendingTrashWork(appContext)
+            return null
+        }
+        return promptIntent(appContext, originalUri)
+    }
+
     fun launchPendingPrompt(context: Context) {
         val originalUri = pendingOriginalUri(context)
         if (originalUri != null) {
