@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -943,7 +944,11 @@ private fun SettingRow(
             Spacer(Modifier.height(3.dp))
             Text(summary, style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurfaceVariant)
         }
-        trailing()
+        // Cap the trailing control so a long localized label wraps inside it instead of
+        // starving the weighted title Column (which would collapse it to a vertical sliver).
+        Box(modifier = Modifier.widthIn(max = 168.dp), contentAlignment = Alignment.CenterEnd) {
+            trailing()
+        }
     }
 }
 

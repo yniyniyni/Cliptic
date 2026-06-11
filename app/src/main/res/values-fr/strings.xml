@@ -97,6 +97,6 @@
     <string name="settings_section_language">Langue</string>
     <string name="language_picker_title">Langue de l\'application</string>
     <string name="setting_app_language_summary">Choisissez la langue utilisée par Cliptic.</string>
-    <string name="language_system_default">Paramètre système par défaut</string>
+    <string name="language_system_default">Système par défaut</string>
     <string name="tile_no_screenshot">Aucune capture récente</string>
 </resources>

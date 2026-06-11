@@ -13,8 +13,8 @@ android {
         applicationId = "art.yniyniyni.cliptic"
         minSdk = 34
         targetSdk = 36
-        versionCode = 1006
-        versionName = "1.0.6"
+        versionCode = 1007
+        versionName = "1.0.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         signingConfig = signingConfigs.getByName("debug")
