@@ -70,6 +70,14 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    // The full (sideload) flavor embeds the LSPosed module: its compiled hook classes are
+    // merged into the app APK, and the META-INF/xposed metadata lives in app/src/full/resources.
+    // This makes the single app APK its own LSPosed module — no separate companion to install.
+    // The play flavor never sees this dependency, so it stays Xposed-free for Google Play.
+    "fullImplementation"(project(":xposed"))
+    // compileOnly so R8 can resolve the libxposed references in the embedded hooks if minify is
+    // ever enabled; the classes are supplied by the Xposed framework at runtime, never packaged.
+    "fullCompileOnly"("io.github.libxposed:api:101.0.1")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
