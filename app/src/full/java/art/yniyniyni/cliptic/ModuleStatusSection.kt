@@ -26,16 +26,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import art.yniyniyni.cliptic.ipc.XposedBridge
 import art.yniyniyni.cliptic.settings.ClipticSettings
 
 @Composable
 internal fun ModuleStatusSection(copyMode: String, onCopyModeChange: (String) -> Unit) {
-    val xposedActive = remember { XposedBridge.isModuleActive() }
-    if (!xposedActive) return
+    // The full flavor is the Xposed-capable build, so the section (and copy-mode picker) is
+    // always shown. Whether the module is actually live is reported by the SystemUI hook via a
+    // provider ping — the module can't hook its own process to flip an in-app flag.
+    val context = LocalContext.current
+    val active = remember { ClipticSettings.isXposedModuleActive(context) }
     val colorScheme = MaterialTheme.colorScheme
+    val statusColor = if (active) colorScheme.primary else colorScheme.onSurfaceVariant
     SectionLabel(stringResource(R.string.settings_section_lsposed))
     GlassCard {
         Surface(
@@ -52,12 +56,14 @@ internal fun ModuleStatusSection(copyMode: String, onCopyModeChange: (String) ->
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(colorScheme.primary)
+                        .background(statusColor)
                 )
                 Text(
-                    text = stringResource(R.string.lsposed_module_active),
+                    text = stringResource(
+                        if (active) R.string.lsposed_module_active else R.string.lsposed_module_inactive
+                    ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = colorScheme.primary
+                    color = statusColor
                 )
             }
         }

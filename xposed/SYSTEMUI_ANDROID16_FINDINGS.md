@@ -112,8 +112,10 @@ mutating the view tree:
   to `art.yniyniyni.cliptic` with Uri + secret. The app caches, copies to the clipboard, toasts,
   and ACKs back → `CopyAckReceiver` trashes the original (`result=1`).
 
-`isModuleActive` is hooked in the app process (`AppHook`) to return `true`, so the standalone UI
-shows "LSPosed active".
+Module-active status: since the module is embedded in the app APK, LSPosed never injects it into
+its own process, so there is no app-process self-hook. Instead the SystemUI hook calls the app's
+secret provider (`PROVIDER_METHOD_RECORD_ACTIVE`) on startup; the app records the timestamp and the
+settings UI shows the LSPosed section as active when SystemUI has pinged since the current boot.
 
 `SystemUiInspector` is retained (no longer invoked) for re-running discovery if a SystemUI build
 changes the class/view map above.

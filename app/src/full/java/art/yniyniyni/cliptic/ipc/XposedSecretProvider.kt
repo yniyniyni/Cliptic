@@ -6,9 +6,26 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Binder
+import android.os.Bundle
 import android.os.Process
+import art.yniyniyni.cliptic.IpcActions
+import art.yniyniyni.cliptic.settings.ClipticSettings
 class XposedSecretProvider : ContentProvider() {
     override fun onCreate(): Boolean = true
+
+    /**
+     * Liveness channel for the embedded module. The SystemUI hook calls
+     * [IpcActions.PROVIDER_METHOD_RECORD_ACTIVE] on startup; we record the timestamp so the app
+     * can show an honest module-active state. UID-gated to the app/SystemUI like [query].
+     */
+    override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
+        val context = context ?: return null
+        if (!isAuthorizedCaller()) return null
+        if (method == IpcActions.PROVIDER_METHOD_RECORD_ACTIVE) {
+            ClipticSettings.recordXposedActive(context)
+        }
+        return null
+    }
 
     override fun query(
         uri: Uri,

@@ -59,6 +59,24 @@ object SystemUIHook {
             expectedSecretProvider = { secretProvider?.invoke(context) },
             log = log
         )
+        pingModuleActive(context, log)
+    }
+
+    /**
+     * Tells the app the module is live this boot. The module can't hook its own process, so a
+     * provider call from the SystemUI process is how the in-app settings learn to show the
+     * LSPosed section as active. Best-effort; the provider is UID-gated on the app side.
+     */
+    private fun pingModuleActive(context: Context, log: (String) -> Unit) {
+        runCatching {
+            context.contentResolver.call(
+                AppProtocol.SECRET_PROVIDER_AUTHORITY,
+                AppProtocol.PROVIDER_METHOD_RECORD_ACTIVE,
+                null,
+                null
+            )
+            log("module-active ping sent to app provider")
+        }.onFailure { log("module-active ping failed: ${it.javaClass.simpleName}: ${it.message}") }
     }
 
     private fun readExpectedSecret(context: Context): String? {
