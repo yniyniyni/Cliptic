@@ -62,6 +62,7 @@ google-services.json
 !xposed/libs/*.aar
 !xposed/libs/*.jar
 AGENTS.md
+CLAUDE.md
 screenshot-clip-spec.md
 plan.md
 /.idea
