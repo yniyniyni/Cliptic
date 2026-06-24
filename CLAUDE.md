@@ -41,7 +41,7 @@ Three Gradle modules, all under package root `art.yniyniyni.cliptic`:
 
 ### CopyButtonInjector (screenshot shelf)
 
-Injects a "Copy" chip into the Android 16 Pixel SystemUI screenshot shelf toolbar. Uses **model injection**: a `before` hook on `ScreenshotShelfViewBinder.access$updateActions` prepends a `ActionButtonViewModel` (with a `CopyIconDrawable`) to the action list so the framework renders, styles, and recycles the chip exactly like Share/Edit. The screenshot URI is captured separately via `after` hooks on Uri-bearing methods in `ImageExporter`, `ActionIntentCreator`, and `ScreenshotController`. On tap, broadcasts `ACTION_COPY_SCREENSHOT` (Uri + secret) to the Cliptic app.
+Injects a "Copy" chip into the Pixel SystemUI screenshot shelf toolbar. Uses **model injection**: a `before` hook on `ScreenshotShelfViewBinder.access$updateActions` prepends a `ActionButtonViewModel` (with a `CopyIconDrawable`) to the action list so the framework renders, styles, and recycles the chip exactly like Share/Edit. The screenshot URI is captured separately via `after` hooks on Uri-bearing methods in `ImageExporter`, `ActionIntentCreator`, and `ScreenshotController`. On tap, broadcasts `ACTION_COPY_SCREENSHOT` (Uri + secret) to the Cliptic app. Verified working on Android 16 **and 17** (same class/arg map). Note: on Android 17 the screenshot UI runs in a separate `com.android.systemui:screenshot` process (still package `com.android.systemui`, so `scope.list` covers it) — `killall com.android.systemui` does NOT restart it, so a stale `:screenshot` process is the usual cause of a missing chip after a module update; reboot to be sure. See `xposed/SYSTEMUI_ANDROID16_FINDINGS.md`.
 
 ### MarkupCopyInjector (Markup / screenshot editor)
 

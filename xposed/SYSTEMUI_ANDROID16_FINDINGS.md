@@ -5,6 +5,22 @@ framework: Vector v2.0 (3021) by JingMatrix). This is the factual basis for impl
 LSPosed "Copy" button. Re-run the harness (take a screenshot, read logcat tag `ClipticXposed`)
 to refresh if the SystemUI build changes.
 
+## Android 17 update — Pixel 8, verified 2026-06 (read this first)
+
+The class/method/arg map below is **unchanged on Android 17 (API 37)**: the Copy chip injects via
+`ScreenshotShelfViewBinder.access$updateActions(binder, List<ActionButtonViewModel>, AnimationState,
+ScreenshotShelfView, LayoutInflater)` — arg index 1 is the action list, arg index 3 is the View.
+Confirmed firing with `List(3)` on a real screenshot.
+
+The one thing that changed: **the screenshot UI runs in a dedicated process,
+`com.android.systemui:screenshot`, not the main `com.android.systemui` process.** Both belong to
+package `com.android.systemui`, so the module's `scope.list` (`com.android.systemui`) already covers
+it and LSPosed injects into both — no scope change needed. But the operational consequence is
+sharp: `killall com.android.systemui` does **not** restart `:screenshot` (different process name),
+so after enabling/updating the module you must let `:screenshot` respawn with fresh hooks. A reboot
+guarantees it; for testing, `kill $(pidof com.android.systemui:screenshot)` then take a screenshot.
+If the chip is missing after a module update, a stale `:screenshot` process is the first suspect.
+
 ## Framework / API contract (critical)
 
 The device framework implements the **original libxposed API 100** (interface-based params,
