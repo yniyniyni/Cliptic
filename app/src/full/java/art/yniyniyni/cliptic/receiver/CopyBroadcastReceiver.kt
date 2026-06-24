@@ -26,23 +26,25 @@ class CopyBroadcastReceiver : BroadcastReceiver() {
         Thread {
             try {
                 val fileManager = ScreenshotFileManager(context)
-                val cachedUri = fileManager.cacheScreenshot(sourceUri)
-                if (cachedUri != null) {
-                    Handler(Looper.getMainLooper()).post {
-                        ClipboardWriter.copyUriToClipboard(context, cachedUri)
-                        ClipticSettings.recordCopy(context)
-                        Toast.makeText(context, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
-                        fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(context))
-                        // The SystemUI-side CopyAckReceiver trashes the original purely on
-                        // receipt of this ACK, so honour remove_original_after_copy here —
-                        // it's the only gate the Xposed path has on that setting.
-                        if (
-                            ClipticSettings.prefs(context)
-                                .getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true)
-                        ) {
-                            sendCopyAck(context, sourceUri, secret)
-                        }
-                    }
+                val cachedUri = fileManager.cacheScreenshot(sourceUri) ?: return@Thread
+                // Do the real work synchronously on this thread so it completes before
+                // pendingResult.finish() releases the process keep-alive. setPrimaryClip,
+                // SharedPreferences and sendBroadcast are all safe off the main thread;
+                // only the Toast needs a Looper, so that is the one thing we post to main.
+                ClipboardWriter.copyUriToClipboard(context, cachedUri)
+                ClipticSettings.recordCopy(context)
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(context, R.string.screenshot_copied, Toast.LENGTH_SHORT).show()
+                }
+                fileManager.scheduleCleanup(cachedUri, ClipticSettings.cacheDurationMs(context))
+                // The SystemUI-side CopyAckReceiver trashes the original purely on
+                // receipt of this ACK, so honour remove_original_after_copy here —
+                // it's the only gate the Xposed path has on that setting.
+                if (
+                    ClipticSettings.prefs(context)
+                        .getBoolean(ClipticSettings.KEY_REMOVE_ORIGINAL_AFTER_COPY, true)
+                ) {
+                    sendCopyAck(context, sourceUri, secret)
                 }
             } finally {
                 pendingResult.finish()

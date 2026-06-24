@@ -25,6 +25,7 @@ object ClipticSettings {
     const val KEY_COPY_COUNT_DAY = "copy_count_day"
     const val KEY_COPY_COUNT_DAY_EPOCH = "copy_count_day_epoch"
     const val KEY_LAST_COPY_AT = "last_copy_at"
+    const val KEY_XPOSED_LAST_ACTIVE = "xposed_last_active"
 
     const val COPY_MODE_AUTO = "auto"
     const val COPY_MODE_XPOSED = "xposed"
@@ -81,6 +82,27 @@ object ClipticSettings {
 
     /** Epoch-millis of the last successful copy, or 0 if none recorded. */
     fun lastCopyAt(context: Context): Long = prefs(context).getLong(KEY_LAST_COPY_AT, 0L)
+
+    /**
+     * Records that the embedded LSPosed module reported in from the SystemUI process (called via
+     * the secret provider). The module can't hook its own process, so this provider ping is how
+     * the app learns the module is live. See [isXposedModuleActive].
+     */
+    fun recordXposedActive(context: Context) {
+        prefs(context).edit().putLong(KEY_XPOSED_LAST_ACTIVE, System.currentTimeMillis()).apply()
+    }
+
+    /**
+     * True if the SystemUI hook has pinged since the current boot — i.e. SystemUI started this
+     * boot with the module enabled. A stale ping from a previous boot reads as inactive, so
+     * disabling the module (then rebooting) correctly flips this to false.
+     */
+    fun isXposedModuleActive(context: Context): Boolean {
+        val lastActive = prefs(context).getLong(KEY_XPOSED_LAST_ACTIVE, 0L)
+        if (lastActive == 0L) return false
+        val bootEpochMs = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
+        return lastActive >= bootEpochMs
+    }
 
     fun shouldRunScreenshotService(context: Context): Boolean {
         val prefs = prefs(context)

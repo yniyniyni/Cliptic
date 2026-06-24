@@ -52,14 +52,17 @@ signing.properties
 secrets.properties
 google-services.json
 
-# Module release output directories (APK + output-metadata.json)
+# Module release output directories (APK + output-metadata.json).
+# The second pattern also catches flavored output at module root (e.g. app/full/release/).
 */release/
+**/release/
 
 # Keep required wrapper and vendored dependency artifacts trackable.
 !gradle/wrapper/gradle-wrapper.jar
 !xposed/libs/*.aar
 !xposed/libs/*.jar
 AGENTS.md
+CLAUDE.md
 screenshot-clip-spec.md
 plan.md
 /.idea

@@ -11,4 +11,9 @@ object IpcActions {
     const val SYSTEMUI_PACKAGE = "com.android.systemui"
     const val SECRET_PROVIDER_AUTHORITY = "art.yniyniyni.cliptic.secrets"
     const val SECRET_PROVIDER_URI = "content://$SECRET_PROVIDER_AUTHORITY/xposed_secret"
+
+    // Mirrors AppProtocol.PROVIDER_METHOD_RECORD_ACTIVE — the SystemUI hook calls this on the
+    // secret provider so the app can record that the embedded module is live (it cannot hook
+    // its own process to flip an in-app flag). Keep in sync with the xposed side.
+    const val PROVIDER_METHOD_RECORD_ACTIVE = "record_module_active"
 }
