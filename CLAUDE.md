@@ -12,9 +12,9 @@ JDK 17, Android SDK 36, `minSdk = 34`. All commands use the Gradle wrapper.
 
 ```sh
 ./gradlew assembleDebug              # all debug APKs
-./gradlew :app:assembleDebug         # standalone app only
-./gradlew :xposed:assembleDebug      # LSPosed module only
-./gradlew :app:installDebug          # install standalone app
+./gradlew :app:assembleFullDebug     # sideload build (embeds the LSPosed module)
+./gradlew :app:assemblePlayDebug     # Play build (no Xposed code)
+./gradlew :app:installFullDebug      # install the sideload app
 ./gradlew test                       # all local unit tests
 ./gradlew :app:testDebugUnitTest --tests "art.yniyniyni.cliptic.ExampleUnitTest"
 ```
@@ -26,8 +26,8 @@ Use `rg` for searching the tree.
 Three Gradle modules, all under package root `art.yniyniyni.cliptic`:
 
 - **`:core`** — pure Android library, no Compose. Owns the reusable primitives: `ClipboardWriter` (writes a `content://` URI onto the clipboard), `ScreenshotDetector` (MediaStore `ContentObserver`), `ScreenshotFileManager` (cache + expiry).
-- **`:app`** — the primary, fully-usable standalone APK (`art.yniyniyni.cliptic`). Compose/Material 3 UI, foreground service, receivers, QS tile, IPC provider, cleanup flow. Depends on `:core`.
-- **`:xposed`** — separate LSPosed module APK (`art.yniyniyni.cliptic.xposed`). Depends on `:core`. Targets Android 16 Pixel SystemUI. Contains four active hooks (see below) plus the retained `SystemUiInspector` discovery harness.
+- **`:app`** — the primary, fully-usable standalone APK (`art.yniyniyni.cliptic`). Compose/Material 3 UI, foreground service, receivers, QS tile, IPC provider, cleanup flow. Depends on `:core`. Has two flavors on the `dist` dimension: **`full`** (sideload; embeds the LSPosed module — see below) and **`play`** (Google Play; no Xposed code/IPC at all).
+- **`:xposed`** — an Android **library** (namespace `art.yniyniyni.cliptic.xposed`, no `applicationId`) holding the LSPosed hook classes and the retained `SystemUiInspector` discovery harness. It no longer ships its own APK: the `full` flavor consumes it via `fullImplementation(project(":xposed"))`, so the hook classes are **merged into the single app APK**. The Xposed discovery metadata (`META-INF/xposed/{module.prop,java_init.list,scope.list}`) lives in `app/src/full/resources/`, which makes that one APK its own LSPosed module — **no separate companion to install**. The user installs the full APK, enables it in LSPosed, and restarts SystemUI. Targets Android 16 Pixel SystemUI. Contains four active hooks (see below).
 
 ## Standalone copy flow
 
@@ -68,7 +68,7 @@ The Xposed module runs inside `com.android.systemui`; clipboard writes happen in
 
 After a successful copy the app sends `ACTION_COPY_SCREENSHOT_ACK` back; `CopyAckReceiver` (in the SystemUI process) validates the secret and silently trashes the original via `MediaStore.MediaColumns.IS_TRASHED = 1`.
 
-All SystemUI hook code must stay defensive: wrap reflection in `runCatching`, log failures, fail closed, and never let a hook exception crash `com.android.systemui`. Use modern libxposed API 101 only — metadata lives in `xposed/src/main/resources/META-INF/xposed/` (`module.prop`, `java_init.list`, `scope.list`); the API comes from the official Maven artifact `compileOnly("io.github.libxposed:api:101.0.1")`. The hook model is `module.hook(executable).intercept(Hooker)` where `Hooker.intercept(Chain)` wraps `chain.proceed()` (no static `before`/`after`). Do **not** use legacy `de.robv.android.xposed` entrypoints or `assets/xposed_init`.
+All SystemUI hook code must stay defensive: wrap reflection in `runCatching`, log failures, fail closed, and never let a hook exception crash `com.android.systemui`. Use modern libxposed API 101 only — discovery metadata lives in `app/src/full/resources/META-INF/xposed/` (`module.prop`, `java_init.list`, `scope.list`) so it lands in the merged app APK; the API comes from the official Maven artifact `compileOnly("io.github.libxposed:api:101.0.1")` (declared in `:xposed` for compiling the hooks, plus `fullCompileOnly` in `:app` for R8) and is never packaged. The hook model is `module.hook(executable).intercept(Hooker)` where `Hooker.intercept(Chain)` wraps `chain.proceed()` (no static `before`/`after`). Do **not** use legacy `de.robv.android.xposed` entrypoints or `assets/xposed_init`.
 
 ## Settings
 
@@ -86,7 +86,7 @@ Per-app language support is **auto-generated**: `androidResources { generateLoca
 
 An in-app language picker lives in Settings (the "Language" section). `AppLanguages` (`settings/AppLanguages.kt`) wraps the platform `LocaleManager` (API 33+): `set()` applies a BCP-47 tag — or the empty list for system default — which persists the per-app locale and recreates the activity in the new language. The picker list and autonyms (each language shown in its own script, not translated) must stay in sync with the shipped `values-*` folders.
 
-Ten locales ship: `en-US` (default) plus `ar`, `de`, `es`, `fr`, `hi`, `ja`, `pt-rBR`, `ru`, `zh-rCN`. Each carries the full key set with locale-correct `<plurals>` (Arabic has all six categories; es/fr/pt include `many` for lint). To add a language: create `values-<lang>/strings.xml` with the same keys, or use Android Studio's Translations Editor. No build-file change needed; the locale list regenerates. Keep plural categories valid for the locale or `lint` flags `MissingQuantity`. The `:xposed` module's two strings (`app_name`, `xposed_description`) are not yet localized.
+Ten locales ship: `en-US` (default) plus `ar`, `de`, `es`, `fr`, `hi`, `ja`, `pt-rBR`, `ru`, `zh-rCN`. Each carries the full key set with locale-correct `<plurals>` (Arabic has all six categories; es/fr/pt include `many` for lint). To add a language: create `values-<lang>/strings.xml` with the same keys, or use Android Studio's Translations Editor. No build-file change needed; the locale list regenerates. Keep plural categories valid for the locale or `lint` flags `MissingQuantity`. The embedded LSPosed module carries no user-facing strings of its own; it surfaces under the host app's label and icon in LSPosed.
 
 ## Scope constraints
 
