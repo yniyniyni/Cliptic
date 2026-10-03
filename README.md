@@ -25,6 +25,8 @@ Cliptic (`clip + automatic`) is an Android app that copies screenshots to the cl
 - Injects a "Copy" button into the Pixel Markup (screenshot edit) screen
 - Works via a signed IPC bridge between the SystemUI process and the Cliptic app; the app handles the clipboard write
 
+**System UI hook doesn't work on the September Pixel update for now. Gonna fix it later**
+
 Both modes can run simultaneously (`both`) or independently (`auto` or `xposed`).
 
 ## Requirements
