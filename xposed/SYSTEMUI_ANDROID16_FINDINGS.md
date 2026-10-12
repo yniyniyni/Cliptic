@@ -21,6 +21,16 @@ so after enabling/updating the module you must let `:screenshot` respawn with fr
 guarantees it; for testing, `kill $(pidof com.android.systemui:screenshot)` then take a screenshot.
 If the chip is missing after a module update, a stale `:screenshot` process is the first suspect.
 
+### Android 17 CP3A.260905.009 (Sept 2026) — accessor removed
+
+On this build `ScreenshotShelfViewBinder` no longer has the static synthetic
+`access$updateActions`; `updateActions(List, AnimationState, ScreenshotShelfView, LayoutInflater)`
+is now `public final` and called directly from the `bind$2$1$1$…` lambdas. The old lookup threw
+`NoSuchElementException`, so the chip vanished while Markup (separate hook) kept working.
+`CopyButtonInjector.hookUpdateActions` now prefers `access$updateActions` and falls back to
+`updateActions`, resolving the list/view arg indices by type (accessor: 1/3, direct: 0/2).
+`ActionButtonAppearance` / `ActionButtonViewModel` constructors are unchanged.
+
 ## Framework / API contract (critical)
 
 The device framework implements the **original libxposed API 100** (interface-based params,
