@@ -25,8 +25,6 @@ Cliptic (`clip + automatic`) is an Android app that copies screenshots to the cl
 - Injects a "Copy" button into the Pixel Markup (screenshot edit) screen
 - Works via a signed IPC bridge between the SystemUI process and the Cliptic app; the app handles the clipboard write
 
-**System UI hook doesn't work on the September Pixel update for now. Gonna fix it later**
-
 Both modes can run simultaneously (`both`) or independently (`auto` or `xposed`).
 
 ## Requirements
@@ -73,7 +71,7 @@ When Cliptic receives an `image/*` share intent, `ShareReceiverActivity` runs th
 
 ### LSPosed copy flow
 
-`CopyButtonInjector` hooks `ScreenshotShelfViewBinder.access$updateActions` in the `com.android.systemui` process, prepending a `Copy` `ActionButtonViewModel` to the action list so the framework renders, styles, and recycles the chip exactly like Share and Edit. On tap the module reads the IPC secret from `XposedSecretProvider` and broadcasts `ACTION_COPY_SCREENSHOT` (with the screenshot URI and the secret) to the Cliptic app. The app validates the secret, caches the image, and writes it to the clipboard. It then sends `ACTION_COPY_SCREENSHOT_ACK` back; `CopyAckReceiver` in SystemUI validates the ACK secret and silently trashes the original.
+`CopyButtonInjector` hooks `ScreenshotShelfViewBinder.updateActions` (or its `access$updateActions` accessor on older builds) in the `com.android.systemui:screenshot` process, prepending a `Copy` `ActionButtonViewModel` to the action list so the framework renders, styles, and recycles the chip exactly like Share and Edit. On tap the module reads the IPC secret from `XposedSecretProvider` and broadcasts `ACTION_COPY_SCREENSHOT` (with the screenshot URI and the secret) to the Cliptic app. The app validates the secret, caches the image, and writes it to the clipboard. It then sends `ACTION_COPY_SCREENSHOT_ACK` back; `CopyAckReceiver` in SystemUI validates the ACK secret and silently trashes the original.
 
 `MarkupCopyInjector` hooks the Pixel Markup editor (`com.google.android.markup` → `AnnotateActivity`) and adds a Copy button that invokes the editor's built-in clipboard-export path, suppressing the trailing `finishAndRemoveTask()` so the editor stays open.
 
