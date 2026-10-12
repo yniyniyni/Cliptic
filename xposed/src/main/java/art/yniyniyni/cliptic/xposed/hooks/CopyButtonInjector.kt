@@ -20,7 +20,7 @@ import java.lang.reflect.Proxy
  * `xposed/SYSTEMUI_ANDROID16_FINDINGS.md`.
  *
  * The chip is added by **model injection**, not by mutating the view tree: a *before* hook on
- * `ScreenshotShelfViewBinder.access$updateActions(binder, List<ActionButtonViewModel>, …)` prepends
+ * `ScreenshotShelfViewBinder.updateActions` (or its `access$` accessor on older builds) prepends
  * our own `ActionButtonViewModel` to the action list, so the framework builds, styles, and recycles
  * our chip exactly like Share/Edit. (An earlier version added a raw View into the framework-managed
  * `screenshot_actions` LinearLayout; that corrupted the binder's index-based view recycling and
@@ -51,6 +51,13 @@ object CopyButtonInjector {
 
     @Volatile
     private var unitInstance: Any? = null
+
+    // Arg positions of the action list / shelf view in the hooked updateActions variant.
+    @Volatile
+    private var actionsArgIndex = -1
+
+    @Volatile
+    private var viewArgIndex = -1
 
     fun install(module: XposedInterface, classLoader: ClassLoader, log: (String) -> Unit) {
         logSink = log
@@ -119,15 +126,31 @@ object CopyButtonInjector {
         return hooks
     }
 
+    /**
+     * Android 16 and early 17 builds route through the static synthetic accessor
+     * `access$updateActions(binder, List, AnimationState, ScreenshotShelfView, LayoutInflater)`;
+     * newer Android 17 builds (CP3A.260905+) made `updateActions(List, AnimationState,
+     * ScreenshotShelfView, LayoutInflater)` a public instance method and dropped the accessor.
+     * Prefer the proven accessor, fall back to the direct method, and locate the list/view
+     * args by type so the injection works with either arg layout.
+     */
     private fun hookUpdateActions(
         module: XposedInterface,
         classLoader: ClassLoader,
         log: (String) -> Unit
     ): Int = runCatching {
         val binder = Class.forName(SHELF_BINDER_CLASS, false, classLoader)
-        val method = binder.declaredMethods.first { it.name == "access\$updateActions" }
+        val candidates = binder.declaredMethods.filter { !Modifier.isAbstract(it.modifiers) }
+        val method = candidates.firstOrNull { it.name == "access\$updateActions" }
+            ?: candidates.first { it.name == "updateActions" }
+        val params = method.parameterTypes
+        val listIndex = params.indexOfFirst { List::class.java.isAssignableFrom(it) }
+        val viewIndex = params.indexOfFirst { android.view.View::class.java.isAssignableFrom(it) }
+        check(listIndex >= 0 && viewIndex >= 0) { "unexpected signature ${method.toGenericString()}" }
+        actionsArgIndex = listIndex
+        viewArgIndex = viewIndex
         module.hook(method).intercept(UpdateActionsHooker())
-        log("hooked $SHELF_BINDER_CLASS#access\$updateActions for model injection")
+        log("hooked $SHELF_BINDER_CLASS#${method.name} for model injection (list=$listIndex view=$viewIndex)")
         1
     }.onFailure { log("hook updateActions failed: ${it.javaClass.simpleName}: ${it.message}") }
         .getOrDefault(0)
@@ -144,11 +167,11 @@ object CopyButtonInjector {
         val log = logSink ?: return
         runCatching {
             val a = args ?: return
-            val list = a.getOrNull(1) as? List<*> ?: return
-            val context = (a.getOrNull(3) as? android.view.View)?.context ?: return
+            val list = a.getOrNull(actionsArgIndex) as? List<*> ?: return
+            val context = (a.getOrNull(viewArgIndex) as? android.view.View)?.context ?: return
             val model = buildCopyModel(context) ?: return
             // Prepend so Copy is the leftmost chip; the framework renders the whole list itself.
-            a[1] = ArrayList<Any?>(list.size + 1).apply {
+            a[actionsArgIndex] = ArrayList<Any?>(list.size + 1).apply {
                 add(model)
                 addAll(list)
             }
